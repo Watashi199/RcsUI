@@ -1,0 +1,108 @@
+created directory /tmp/tmp.JmhKhA/dst3
+::I cd+++++++++ 4096 ./
+::I >f+++++++++ 30000000 big.bin
+          32768B   0%       0B/s    0:00:00         30000000B  50% 856206628B/s    0:00:00 (xfr#1, to-chk=46/48)
+::I cL+++++++++ 8 link
+::I >f+++++++++ 1 new\#012line
+       30000001B  50% 809925216B/s    0:00:00 (xfr#2, to-chk=44/48)
+::I >f+++++++++ 1 unicodé ☃.txt
+       30000002B  50% 809925243B/s    0:00:00 (xfr#3, to-chk=43/48)
+::I >f+++++++++ 0 zero.txt
+       30000002B  50% 809925243B/s    0:00:00 (xfr#4, to-chk=42/48)
+::I cd+++++++++ 4096 empty/
+::I cd+++++++++ 4096 sub dir/
+::I >f+++++++++ 0 sub dir/file 0.bin
+       30000002B  50% 788611421B/s    0:00:00 (xfr#5, to-chk=39/48)
+::I >f+++++++++ 37000 sub dir/file 1.bin
+       30037002B  51% 789585105B/s    0:00:00 (xfr#6, to-chk=38/48)
+::I >f+++++++++ 370000 sub dir/file 10.bin
+       30407002B  51% 778826512B/s    0:00:00 (xfr#7, to-chk=37/48)
+::I >f+++++++++ 407000 sub dir/file 11.bin
+       30814002B  52% 769530850B/s    0:00:00 (xfr#8, to-chk=36/48)
+::I >f+++++++++ 444000 sub dir/file 12.bin
+       31258002B  53% 761591073B/s    0:00:00 (xfr#9, to-chk=35/48)
+::I >f+++++++++ 481000 sub dir/file 13.bin
+       31739002B  53% 754910333B/s    0:00:00 (xfr#10, to-chk=34/48)
+::I >f+++++++++ 518000 sub dir/file 14.bin
+       32257002B  54% 749400790B/s    0:00:00 (xfr#11, to-chk=33/48)
+::I >f+++++++++ 555000 sub dir/file 15.bin
+       32812002B  55% 744982590B/s    0:00:00 (xfr#12, to-chk=32/48)
+::I >f+++++++++ 592000 sub dir/file 16.bin
+       33404002B  56% 741582977B/s    0:00:00 (xfr#13, to-chk=31/48)
+::I >f+++++++++ 629000 sub dir/file 17.bin
+       34033002B  57% 723409234B/s    0:00:00 (xfr#14, to-chk=30/48)
+::I >f+++++++++ 666000 sub dir/file 18.bin
+       34699002B  58% 722213208B/s    0:00:00 (xfr#15, to-chk=29/48)
+::I >f+++++++++ 703000 sub dir/file 19.bin
+       35402002B  60% 721821102B/s    0:00:00 (xfr#16, to-chk=28/48)
+::I >f+++++++++ 74000 sub dir/file 2.bin
+       35476002B  60% 708864680B/s    0:00:00 (xfr#17, to-chk=27/48)
+::I >f+++++++++ 740000 sub dir/file 20.bin
+       36216002B  61% 709475176B/s    0:00:00 (xfr#18, to-chk=26/48)
+::I >f+++++++++ 777000 sub dir/file 21.bin
+       36993002B  62% 710773730B/s    0:00:00 (xfr#19, to-chk=25/48)
+::I >f+++++++++ 814000 sub dir/file 22.bin
+       37807002B  64% 712721396B/s    0:00:00 (xfr#20, to-chk=24/48)
+::I >f+++++++++ 851000 sub dir/file 23.bin
+       38658002B  65% 702276981B/s    0:00:00 (xfr#21, to-chk=23/48)
+::I >f+++++++++ 888000 sub dir/file 24.bin
+       39546002B  67% 705593464B/s    0:00:00 (xfr#22, to-chk=22/48)
+::I >f+++++++++ 925000 sub dir/file 25.bin
+       40471002B  68% 697210931B/s    0:00:00 (xfr#23, to-chk=21/48)
+::I >f+++++++++ 962000 sub dir/file 26.bin
+       41433002B  70% 701698881B/s    0:00:00 (xfr#24, to-chk=20/48)
+::I >f+++++++++ 999000 sub dir/file 27.bin
+       42432002B  72% 695069409B/s    0:00:00 (xfr#25, to-chk=19/48)
+::I >f+++++++++ 1036000 sub dir/file 28.bin
+       43468002B  73% 700568290B/s    0:00:00 (xfr#26, to-chk=18/48)
+::I >f+++++++++ 1073000 sub dir/file 29.bin
+       44541002B  75% 695441156B/s    0:00:00 (xfr#27, to-chk=17/48)
+::I >f+++++++++ 111000 sub dir/file 3.bin
+       44652002B  75% 686449753B/s    0:00:00 (xfr#28, to-chk=16/48)
+::I >f+++++++++ 1110000 sub dir/file 30.bin
+       45762002B  77% 692867181B/s    0:00:00 (xfr#29, to-chk=15/48)
+::I >f+++++++++ 1147000 sub dir/file 31.bin
+       46909002B  79% 689356382B/s    0:00:00 (xfr#30, to-chk=14/48)
+::I >f+++++++++ 1184000 sub dir/file 32.bin
+       48093002B  81% 686574771B/s    0:00:00 (xfr#31, to-chk=13/48)
+::I >f+++++++++ 1221000 sub dir/file 33.bin
+       49314002B  83% 694101887B/s    0:00:00 (xfr#32, to-chk=12/48)
+::I >f+++++++++ 1258000 sub dir/file 34.bin
+       50572002B  85% 692318273B/s    0:00:00 (xfr#33, to-chk=11/48)
+::I >f+++++++++ 1295000 sub dir/file 35.bin
+       51867002B  88% 691123120B/s    0:00:00 (xfr#34, to-chk=10/48)
+::I >f+++++++++ 1332000 sub dir/file 36.bin
+       53199002B  90% 690470571B/s    0:00:00 (xfr#35, to-chk=9/48) 
+::I >f+++++++++ 1369000 sub dir/file 37.bin
+       54568002B  92% 690319417B/s    0:00:00 (xfr#36, to-chk=8/48)
+::I >f+++++++++ 1406000 sub dir/file 38.bin
+       55974002B  95% 690632518B/s    0:00:00 (xfr#37, to-chk=7/48)
+::I >f+++++++++ 1443000 sub dir/file 39.bin
+       57417002B  97% 683145642B/s    0:00:00 (xfr#38, to-chk=6/48)
+::I >f+++++++++ 148000 sub dir/file 4.bin
+       57565002B  97% 684907547B/s    0:00:00 (xfr#39, to-chk=5/48)::I >f+++++++++ 222000 sub dir/file 6.bin
+       57972002B  98% 681638047B/s    0:00:00 (xfr#41, to-chk=3/48)
+::I >f+++++++++ 259000 sub dir/file 7.bin
+       58231002B  98% 676723651B/s    0:00:00 (xfr#42, to-chk=2/48)
+::I >f+++++++++ 296000 sub dir/file 8.bin
+       58527002B  99% 680165511B/s    0:00:00 (xfr#43, to-chk=1/48)
+::I >f+++++++++ 333000 sub dir/file 9.bin
+       58860002B  99% 676175103B/s    0:00:00 (xfr#44, to-chk=0/48)       58860002B  99% 676175103B/s    0:00:00 (xfr#44, to-chk=0/48)       58860002B  99% 676175103B/s    0:00:00 (xfr#44, to-chk=0/48)       58860002B  99% 668491295B/s    0:00:00 (xfr#44, to-chk=0/48)
+
+Number of files: 48 (reg: 44, dir: 3, link: 1)
+Number of created files: 48 (reg: 44, dir: 3, link: 1)
+Number of deleted files: 0
+Number of regular files transferred: 44
+Total file size: 58860010 bytes
+Total transferred file size: 58860002 bytes
+Literal data: 58675002 bytes
+Number of 4 KiB logical blocks touched: 14349
+Matched data: 0 bytes
+File list size: 0
+File list generation time: 0.001 seconds
+File list transfer time: 0.000 seconds
+Total bytes sent: 58692012
+Total bytes received: 917
+
+sent 58692012 bytes  received 917 bytes  117385858.00 bytes/sec
+total size is 58860010  speedup is 1.00

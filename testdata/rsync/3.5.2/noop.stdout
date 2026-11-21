@@ -1,0 +1,19 @@
+              0B   0%       0B/s    0:00:00 (xfr#0, to-chk=0/48)              0B   0%       0B/s    0:00:00 (xfr#0, to-chk=0/48)              0B   0%       0B/s    0:00:00 (xfr#0, to-chk=0/48)
+
+Number of files: 48 (reg: 44, dir: 3, link: 1)
+Number of created files: 0
+Number of deleted files: 0
+Number of regular files transferred: 0
+Total file size: 58860010 bytes
+Total transferred file size: 0 bytes
+Literal data: 0 bytes
+Number of 4 KiB logical blocks touched: 0
+Matched data: 0 bytes
+File list size: 0
+File list generation time: 0.001 seconds
+File list transfer time: 0.000 seconds
+Total bytes sent: 921
+Total bytes received: 11
+
+sent 921 bytes  received 11 bytes  1864.00 bytes/sec
+total size is 58860010  speedup is 63154.52

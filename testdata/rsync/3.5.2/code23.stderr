@@ -1,0 +1,3 @@
+
+rsync: [sender] send_files failed to open "/tmp/tmp.JmhKhA/src/sub dir/file 5.bin": Permission denied (13)
+rsync error: some files/attrs were not transferred (see previous errors) (code 23) at main.c(1416) [sender=3.5.2]

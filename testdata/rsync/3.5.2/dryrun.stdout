@@ -1,0 +1,69 @@
+::I >f+++++++++ 30000000 big.bin
+::I cL+++++++++ 8 link
+::I >f+++++++++ 1 new\#012line
+::I >f+++++++++ 1 unicodé ☃.txt
+::I >f+++++++++ 0 zero.txt
+::I cd+++++++++ 4096 empty/
+::I cd+++++++++ 4096 sub dir/
+::I >f+++++++++ 0 sub dir/file 0.bin
+::I >f+++++++++ 37000 sub dir/file 1.bin
+::I >f+++++++++ 370000 sub dir/file 10.bin
+::I >f+++++++++ 407000 sub dir/file 11.bin
+::I >f+++++++++ 444000 sub dir/file 12.bin
+::I >f+++++++++ 481000 sub dir/file 13.bin
+::I >f+++++++++ 518000 sub dir/file 14.bin
+::I >f+++++++++ 555000 sub dir/file 15.bin
+::I >f+++++++++ 592000 sub dir/file 16.bin
+::I >f+++++++++ 629000 sub dir/file 17.bin
+::I >f+++++++++ 666000 sub dir/file 18.bin
+::I >f+++++++++ 703000 sub dir/file 19.bin
+::I >f+++++++++ 74000 sub dir/file 2.bin
+::I >f+++++++++ 740000 sub dir/file 20.bin
+::I >f+++++++++ 777000 sub dir/file 21.bin
+::I >f+++++++++ 814000 sub dir/file 22.bin
+::I >f+++++++++ 851000 sub dir/file 23.bin
+::I >f+++++++++ 888000 sub dir/file 24.bin
+::I >f+++++++++ 925000 sub dir/file 25.bin
+::I >f+++++++++ 962000 sub dir/file 26.bin
+::I >f+++++++++ 999000 sub dir/file 27.bin
+::I >f+++++++++ 1036000 sub dir/file 28.bin
+::I >f+++++++++ 1073000 sub dir/file 29.bin
+::I >f+++++++++ 111000 sub dir/file 3.bin
+::I >f+++++++++ 1110000 sub dir/file 30.bin
+::I >f+++++++++ 1147000 sub dir/file 31.bin
+::I >f+++++++++ 1184000 sub dir/file 32.bin
+::I >f+++++++++ 1221000 sub dir/file 33.bin
+::I >f+++++++++ 1258000 sub dir/file 34.bin
+::I >f+++++++++ 1295000 sub dir/file 35.bin
+::I >f+++++++++ 1332000 sub dir/file 36.bin
+::I >f+++++++++ 1369000 sub dir/file 37.bin
+::I >f+++++++++ 1406000 sub dir/file 38.bin
+::I >f+++++++++ 1443000 sub dir/file 39.bin
+::I >f+++++++++ 148000 sub dir/file 4.bin
+::I >f+++++++++ 185000 sub dir/file 5.bin
+::I >f+++++++++ 222000 sub dir/file 6.bin
+::I >f+++++++++ 259000 sub dir/file 7.bin
+::I >f+++++++++ 296000 sub dir/file 8.bin
+::I >f+++++++++ 333000 sub dir/file 9.bin
+       58860002B  99% 58860002000B/s    0:00:00 (xfr#44, to-chk=0/48)       58860002B  99% 58860002000B/s    0:00:00 (xfr#44, to-chk=0/48)       58860002B  99% 58860002000B/s    0:00:00 (xfr#44, to-chk=0/48)
+::I *deleting   0 stale/old.txt
+::I *deleting   0 stale/
+::I *deleting   0 gone.txt
+
+Number of files: 48 (reg: 44, dir: 3, link: 1)
+Number of created files: 47 (reg: 44, dir: 2, link: 1)
+Number of deleted files: 3 (reg: 2, dir: 1)
+Number of regular files transferred: 44
+Total file size: 58860010 bytes
+Total transferred file size: 58860002 bytes
+Literal data: 0 bytes
+Number of 4 KiB logical blocks touched: 0
+Matched data: 0 bytes
+File list size: 0
+File list generation time: 0.001 seconds
+File list transfer time: 0.000 seconds
+Total bytes sent: 1062
+Total bytes received: 152
+
+sent 1062 bytes  received 152 bytes  2428.00 bytes/sec
+total size is 58860010  speedup is 48484.36 (DRY RUN)

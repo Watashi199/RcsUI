@@ -1,0 +1,11 @@
+.git
+.tmp
+.dev
+bin
+spikes
+testdata
+web/node_modules
+web/build
+web/.svelte-kit
+web/.vitest
+**/*.db

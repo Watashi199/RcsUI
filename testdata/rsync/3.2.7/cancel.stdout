@@ -1,0 +1,4 @@
+created directory /tmp/tmp.VwxPZbiovI/dst6
+::I cd+++++++++ 4096 ./
+::I >f+++++++++ 30000000 big.bin
+          32768   0%    0.00kB/s    0:00:00          2195456   3%    1.97MB/s    0:00:28          4259840   7%    1.96MB/s    0:00:27  
