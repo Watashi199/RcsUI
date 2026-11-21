@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { get, put, post, errorMessage } from '#lib/api.ts';
+	import { t } from '#lib/i18n/i18n.svelte.ts';
 	import type { NotificationInput, NotificationSettings, NotifyMode } from '#lib/types.ts';
 
 	// Les URL et le jeton ne sont jamais renvoyés par l'API : un champ laissé
@@ -48,7 +49,7 @@
 		busy = true;
 		try {
 			load(await put<NotificationSettings>('/settings/notifications', input()));
-			msg = 'Notifications enregistrées.';
+			msg = t('admin.notify.saved');
 		} catch (err) {
 			error = errorMessage(err);
 		} finally {
@@ -61,7 +62,7 @@
 		busy = true;
 		try {
 			await post('/settings/notifications/test', input());
-			msg = 'Notification de test envoyée.';
+			msg = t('admin.notify.testSent');
 		} catch (err) {
 			error = errorMessage(err);
 		} finally {
@@ -70,73 +71,73 @@
 	}
 </script>
 
-<h2>Notifications</h2>
+<h2>{t('admin.notify.title')}</h2>
 {#if error}<div class="alert err">{error}</div>{/if}
 {#if msg}<div class="alert ok">{msg}</div>{/if}
 {#if cur}
 	<form class="card box" onsubmit={save}>
 		<div class="field">
-			<label for="non">Notifier</label>
+			<label for="non">{t('admin.notify.on')}</label>
 			<select id="non" bind:value={on}>
-				<option value="never">jamais</option>
-				<option value="failures">les problèmes (échec, partiel, interrompu, ignoré)</option>
-				<option value="all">toutes les fins d'exécution</option>
+				<option value="never">{t('admin.notify.never')}</option>
+				<option value="failures">{t('admin.notify.failures')}</option>
+				<option value="all">{t('admin.notify.all')}</option>
 			</select>
 		</div>
-		<label class="check"><input type="checkbox" bind:checked={includeDryRuns} /> Inclure les dry-runs</label>
+		<label class="check"><input type="checkbox" bind:checked={includeDryRuns} /> {t('admin.notify.includeDryRuns')}</label>
 
 		<div class="field">
-			<label for="wh">Webhook (POST JSON)</label>
+			<label for="wh">{t('admin.notify.webhook')}</label>
 			<div class="row">
 				<input
 					id="wh"
 					type="url"
 					bind:value={webhookUrl}
 					autocomplete="off"
-					placeholder={cur.webhookSet && !clear.webhook ? `${cur.webhookUrl} (enregistré, laisser vide pour conserver)` : 'https://…'}
+					placeholder={cur.webhookSet && !clear.webhook ? t('admin.notify.savedKeepPlaceholder', { url: cur.webhookUrl }) : 'https://…'}
 				/>
 				{#if cur.webhookSet && !clear.webhook}
-					<button type="button" onclick={() => ((clear.webhook = true), (webhookUrl = ''))}>Effacer</button>
+					<button type="button" onclick={() => ((clear.webhook = true), (webhookUrl = ''))}>{t('admin.notify.clear')}</button>
 				{/if}
 			</div>
-			<div class="hint">Corps : <span class="mono">{'{event, run, retryAt, url, title, message}'}</span>.</div>
+			<div class="hint">{t('admin.notify.body')} <span class="mono">{'{event, run, retryAt, url, title, message}'}</span>.</div>
 		</div>
 
 		<div class="field">
-			<label for="nt">ntfy : URL du topic</label>
+			<label for="nt">{t('admin.notify.ntfyUrl')}</label>
 			<div class="row">
 				<input
 					id="nt"
 					type="url"
 					bind:value={ntfyUrl}
 					autocomplete="off"
-					placeholder={cur.ntfySet && !clear.ntfy ? `${cur.ntfyUrl} (enregistré, laisser vide pour conserver)` : 'https://ntfy.sh/mon-topic'}
+					placeholder={cur.ntfySet && !clear.ntfy ? t('admin.notify.savedKeepPlaceholder', { url: cur.ntfyUrl }) : t('admin.notify.ntfyUrlPlaceholder')}
 				/>
 				{#if cur.ntfySet && !clear.ntfy}
-					<button type="button" onclick={() => ((clear.ntfy = true), (ntfyUrl = ''))}>Effacer</button>
+					<button type="button" onclick={() => ((clear.ntfy = true), (ntfyUrl = ''))}>{t('admin.notify.clear')}</button>
 				{/if}
 			</div>
 		</div>
 		<div class="field">
-			<label for="ntk">ntfy : jeton d'accès (optionnel)</label>
+			<label for="ntk">{t('admin.notify.ntfyToken')}</label>
 			<div class="row">
 				<input
 					id="ntk"
 					type="password"
 					bind:value={ntfyToken}
 					autocomplete="new-password"
-					placeholder={cur.ntfyTokenSet && !clear.token ? '•••••• (enregistré)' : 'tk_…'}
+					placeholder={cur.ntfyTokenSet && !clear.token ? t('admin.notify.tokenSaved') : 'tk_…'}
 				/>
 				{#if cur.ntfyTokenSet && !clear.token}
-					<button type="button" onclick={() => ((clear.token = true), (ntfyToken = ''))}>Effacer</button>
+					<button type="button" onclick={() => ((clear.token = true), (ntfyToken = ''))}>{t('admin.notify.clear')}</button>
 				{/if}
 			</div>
 		</div>
-		<div class="hint">Les URL et le jeton sont chiffrés au repos et ne sont jamais réaffichés.</div>
+		<div class="hint">{t('admin.notify.encryptedHint')}</div>
 
 		<div class="row" style="margin-top:1rem">
-			<button class="primary" type="submit" disabled={busy}>Enregistrer</button>
-			<button type="button" onclick={test} disabled={busy}>Envoyer un test</button>
+			<button class="primary" type="submit" disabled={busy}>{t('common.save')}</button>
+			<button type="button" onclick={test} disabled={busy}>{t('admin.notify.sendTest')}</button>
 		</div>
 	</form>
 {/if}

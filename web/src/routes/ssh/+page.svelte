@@ -2,6 +2,7 @@
 	import { get, post, put, del, errorMessage } from '#lib/api.ts';
 	import { session } from '#lib/session.svelte.ts';
 	import { dateTime } from '#lib/format.ts';
+	import { t } from '#lib/i18n/i18n.svelte.ts';
 	import type { KnownHost, SSHIdentityInfo, ScannedKey, User } from '#lib/types.ts';
 
 	let identities = $state<SSHIdentityInfo[]>([]);
@@ -59,16 +60,16 @@
 				await post('/ssh/identities', body);
 				newName = privateKey = passphrase = '';
 			},
-			importMode ? 'Clé importée.' : 'Clé générée : ajoutez la clé publique au fichier authorized_keys du serveur distant.'
+			importMode ? t('admin.ssh.keyImported') : t('admin.ssh.keyGenerated')
 		);
 	}
 
 	async function copy(text: string) {
 		try {
 			await navigator.clipboard.writeText(text);
-			msg = 'Clé publique copiée.';
+			msg = t('admin.ssh.publicKeyCopied');
 		} catch {
-			error = 'Copie impossible : sélectionnez le texte manuellement.';
+			error = t('admin.ssh.copyFailed');
 		}
 	}
 
@@ -81,15 +82,17 @@
 		const ids = Object.entries(granted)
 			.filter(([, v]) => v)
 			.map(([k]) => Number(k));
-		void act(() => put(`/ssh/identities/${grantsFor}/grants`, { userIds: ids }), 'Accès enregistrés.').then(
+		void act(() => put(`/ssh/identities/${grantsFor}/grants`, { userIds: ids }), t('admin.ssh.grantsSaved')).then(
 			() => (grantsFor = null)
 		);
 	}
 	function removeIdentity(i: SSHIdentityInfo) {
-		if (confirm(`Supprimer l'identité ${i.name} ?`)) void act(() => del('/ssh/identities/' + i.id), 'Identité supprimée.');
+		if (confirm(t('admin.ssh.deleteIdentityConfirm', { name: i.name })))
+			void act(() => del('/ssh/identities/' + i.id), t('admin.ssh.identityDeleted'));
 	}
 	function removeHost(h: KnownHost) {
-		if (confirm(`Retirer cette clé de ${h.host} ?`)) void act(() => del('/ssh/known-hosts/' + h.id), 'Clé retirée.');
+		if (confirm(t('admin.ssh.removeHostConfirm', { host: h.host })))
+			void act(() => del('/ssh/known-hosts/' + h.id), t('admin.ssh.keyRemoved'));
 	}
 
 	async function scan(e: SubmitEvent) {
@@ -108,23 +111,23 @@
 	function approve(k: ScannedKey) {
 		void act(
 			() => post('/ssh/known-hosts', { host: scanHost.trim(), port: scanPort, key: k.key }),
-			`Clé ${k.type} approuvée pour ${scanHost}:${scanPort}.`
+			t('admin.ssh.keyApproved', { type: k.type, host: scanHost, port: scanPort })
 		).then(() => (scanned = scanned?.filter((x) => x !== k) ?? null));
 	}
 </script>
 
-<svelte:head><title>SSH · RcsUI</title></svelte:head>
+<svelte:head><title>{t('common.nav.ssh')} · RcsUI</title></svelte:head>
 
-<h1>SSH</h1>
+<h1>{t('common.nav.ssh')}</h1>
 {#if error}<div class="alert err" role="alert">{error}</div>{/if}
 {#if msg}<div class="alert ok">{msg}</div>{/if}
 {#if session.info?.sshMountedAvailable}
-	<div class="alert warn small">Un dossier ~/.ssh monté est aussi disponible pour les jobs (réservé aux administrateurs).</div>
+	<div class="alert warn small">{t('admin.ssh.mountedAvailable')}</div>
 {/if}
 
-<h2>Identités</h2>
+<h2>{t('admin.ssh.identities')}</h2>
 {#if identities.length === 0}
-	<div class="card empty">Aucune identité.</div>
+	<div class="card empty">{t('admin.ssh.noIdentities')}</div>
 {:else}
 	<div class="list">
 		{#each identities as i (i.id)}
@@ -133,20 +136,20 @@
 					<strong>{i.name}</strong>
 					<span class="muted small">{i.keyType} · {i.fingerprint} · {dateTime(i.createdAt)}</span>
 					<span class="spacer"></span>
-					<button onclick={() => copy(i.publicKey)}>Copier la clé publique</button>
-					<button onclick={() => openGrants(i.id)}>Accès</button>
-					<button class="danger" onclick={() => removeIdentity(i)}>Supprimer</button>
+					<button onclick={() => copy(i.publicKey)}>{t('admin.ssh.copyPublicKey')}</button>
+					<button onclick={() => openGrants(i.id)}>{t('admin.ssh.access')}</button>
+					<button class="danger" onclick={() => removeIdentity(i)}>{t('common.delete')}</button>
 				</div>
 				<pre class="mono pub">{i.publicKey}</pre>
 				{#if grantsFor === i.id}
 					<div class="grants">
-						{#if operators.length === 0}<span class="muted small">Aucun utilisateur « operator ».</span>{/if}
+						{#if operators.length === 0}<span class="muted small">{t('admin.ssh.noOperators')}</span>{/if}
 						{#each operators as u (u.id)}
 							<label class="check"><input type="checkbox" bind:checked={granted[u.id]} /> {u.username}</label>
 						{/each}
 						<div class="row">
-							<button class="primary" onclick={saveGrants}>Enregistrer</button>
-							<button onclick={() => (grantsFor = null)}>Fermer</button>
+							<button class="primary" onclick={saveGrants}>{t('common.save')}</button>
+							<button onclick={() => (grantsFor = null)}>{t('common.close')}</button>
 						</div>
 					</div>
 				{/if}
@@ -157,36 +160,37 @@
 
 <form class="card form" onsubmit={createIdentity}>
 	<div class="row">
-		<label class="check"><input type="radio" checked={!importMode} onchange={() => (importMode = false)} /> Générer (ed25519)</label>
-		<label class="check"><input type="radio" checked={importMode} onchange={() => (importMode = true)} /> Importer une clé existante</label>
+		<label class="check"><input type="radio" checked={!importMode} onchange={() => (importMode = false)} /> {t('admin.ssh.generateEd25519')}</label>
+		<label class="check"><input type="radio" checked={importMode} onchange={() => (importMode = true)} /> {t('admin.ssh.importExisting')}</label>
 	</div>
 	<div class="field">
-		<label for="iname">Nom</label>
+		<label for="iname">{t('admin.ssh.name')}</label>
 		<input id="iname" bind:value={newName} required maxlength="64" />
 	</div>
 	{#if importMode}
 		<div class="field">
-			<label for="ipk">Clé privée (PEM / OpenSSH)</label>
+			<label for="ipk">{t('admin.ssh.privateKey')}</label>
 			<textarea id="ipk" rows="6" class="mono" bind:value={privateKey} required autocomplete="off" spellcheck="false"></textarea>
-			<div class="hint">Stockée chiffrée (AES-256-GCM) ; jamais réaffichée.</div>
+			<div class="hint">{t('admin.ssh.privateKeyHint')}</div>
 		</div>
 		<div class="field">
-			<label for="ipp">Passphrase (si la clé est protégée)</label>
+			<label for="ipp">{t('admin.ssh.passphrase')}</label>
 			<input id="ipp" type="password" autocomplete="off" bind:value={passphrase} />
 		</div>
 	{/if}
-	<button class="primary" type="submit">{importMode ? 'Importer' : 'Générer'}</button>
+	<button class="primary" type="submit">{importMode ? t('admin.ssh.import') : t('admin.ssh.generate')}</button>
 </form>
 
-<h2>Hôtes connus</h2>
+<h2>{t('admin.ssh.knownHosts')}</h2>
 <p class="muted small">
-	rsync refuse de se connecter à un hôte dont la clé n'a pas été approuvée ici (pas d'acceptation automatique). Comparez
-	l'empreinte affichée avec celle du serveur (<code>ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub</code>).
+	{t('admin.ssh.knownHostsIntro')}<code>ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub</code>{t(
+		'admin.ssh.knownHostsIntroEnd'
+	)}
 </p>
 <form class="card row scan" onsubmit={scan}>
-	<input placeholder="hôte ou IP" bind:value={scanHost} required aria-label="Hôte" />
-	<input type="number" min="1" max="65535" bind:value={scanPort} aria-label="Port" style="width:7rem" />
-	<button type="submit" disabled={scanning}>{scanning ? 'Analyse…' : 'Récupérer les clés'}</button>
+	<input placeholder={t('admin.ssh.hostPlaceholder')} bind:value={scanHost} required aria-label={t('admin.ssh.host')} />
+	<input type="number" min="1" max="65535" bind:value={scanPort} aria-label={t('admin.ssh.port')} style="width:7rem" />
+	<button type="submit" disabled={scanning}>{scanning ? t('admin.ssh.scanning') : t('admin.ssh.fetchKeys')}</button>
 </form>
 {#if scanned}
 	<div class="card">
@@ -195,7 +199,7 @@
 				<span class="mono">{k.type}</span>
 				<strong class="mono">{k.fingerprint}</strong>
 				<span class="spacer"></span>
-				<button class="primary" onclick={() => approve(k)}>Approuver</button>
+				<button class="primary" onclick={() => approve(k)}>{t('admin.ssh.approve')}</button>
 			</div>
 		{/each}
 	</div>
@@ -203,14 +207,14 @@
 {#if hosts.length}
 	<div class="table-wrap" style="margin-top:0.8rem">
 		<table>
-			<thead><tr><th>Hôte</th><th>Type</th><th>Empreinte</th><th></th></tr></thead>
+			<thead><tr><th>{t('admin.ssh.host')}</th><th>{t('admin.ssh.type')}</th><th>{t('admin.ssh.fingerprint')}</th><th></th></tr></thead>
 			<tbody>
 				{#each hosts as h (h.id)}
 					<tr>
 						<td class="mono">{h.host}:{h.port}</td>
 						<td class="mono small">{h.keyType}</td>
 						<td class="mono small">{h.fingerprint}</td>
-						<td style="text-align:right"><button class="danger" onclick={() => removeHost(h)}>Retirer</button></td>
+						<td style="text-align:right"><button class="danger" onclick={() => removeHost(h)}>{t('admin.ssh.remove')}</button></td>
 					</tr>
 				{/each}
 			</tbody>

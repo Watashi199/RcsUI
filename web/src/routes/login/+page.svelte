@@ -3,17 +3,19 @@
 	import { page } from '$app/state';
 	import { get, errorMessage } from '#lib/api.ts';
 	import { login, loadSession, session } from '#lib/session.svelte.ts';
+	import { t, type MessageKey } from '#lib/i18n/i18n.svelte.ts';
 
-	const SSO_ERRORS: Record<string, string> = {
-		sso_failed: 'La connexion SSO a échoué.',
-		sso_not_provisioned: "Aucun compte n'est associé à cette identité SSO. Contactez un administrateur.",
-		sso_disabled: 'Ce compte est désactivé.',
-		sso_last_admin: "Connexion refusée : elle retirerait le dernier administrateur (vérifiez les groupes de l'IdP)."
+	const SSO_ERRORS: Record<string, MessageKey> = {
+		sso_failed: 'admin.login.ssoFailed',
+		sso_not_provisioned: 'admin.login.ssoNotProvisioned',
+		sso_disabled: 'admin.login.ssoDisabled',
+		sso_last_admin: 'admin.login.ssoLastAdmin'
 	};
 
 	let username = $state('');
 	let password = $state('');
-	let error = $state(SSO_ERRORS[page.url.searchParams.get('error') ?? ''] ?? '');
+	const ssoError: MessageKey | undefined = SSO_ERRORS[page.url.searchParams.get('error') ?? ''];
+	let error = $state(ssoError ? t(ssoError) : '');
 	let busy = $state(false);
 	let oidc = $state(false);
 
@@ -44,23 +46,23 @@
 	}
 </script>
 
-<svelte:head><title>Connexion · RcsUI</title></svelte:head>
+<svelte:head><title>{t('admin.login.title')} · RcsUI</title></svelte:head>
 
 <form class="card login" onsubmit={submit}>
 	<h1>RcsUI</h1>
 	{#if error}<div class="alert err" role="alert">{error}</div>{/if}
 	<div class="field">
-		<label for="u">Utilisateur</label>
+		<label for="u">{t('admin.login.username')}</label>
 		<input id="u" autocomplete="username" bind:value={username} required />
 	</div>
 	<div class="field">
-		<label for="p">Mot de passe</label>
+		<label for="p">{t('admin.login.password')}</label>
 		<input id="p" type="password" autocomplete="current-password" bind:value={password} required />
 	</div>
-	<button class="primary" type="submit" disabled={busy}>{busy ? 'Connexion…' : 'Se connecter'}</button>
+	<button class="primary" type="submit" disabled={busy}>{busy ? t('admin.login.signingIn') : t('admin.login.signIn')}</button>
 	{#if oidc}
-		<div class="sep muted small">ou</div>
-		<a class="btn sso" href={ssoHref} data-sveltekit-reload>Se connecter avec SSO</a>
+		<div class="sep muted small">{t('admin.login.or')}</div>
+		<a class="btn sso" href={ssoHref} data-sveltekit-reload>{t('admin.login.signInSso')}</a>
 	{/if}
 </form>
 

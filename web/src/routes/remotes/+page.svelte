@@ -2,6 +2,7 @@
 	import { get, post, del, errorMessage } from '#lib/api.ts';
 	import { isAdmin } from '#lib/session.svelte.ts';
 	import type { RemoteSummary } from '#lib/types.ts';
+	import { t } from '#lib/i18n/i18n.svelte.ts';
 
 	let remotes = $state<RemoteSummary[]>([]);
 	let tests = $state<Record<string, { ok: boolean; latencyMs: number; error?: string } | 'pending'>>({});
@@ -25,7 +26,7 @@
 		}
 	}
 	async function remove(n: string) {
-		if (!confirm(`Supprimer le remote « ${n} » ?`)) return;
+		if (!confirm(t('remotes.list.deleteConfirm', { name: n }))) return;
 		try {
 			await del('/remotes/' + encodeURIComponent(n));
 			await load();
@@ -35,35 +36,35 @@
 	}
 </script>
 
-<svelte:head><title>Remotes · RcsUI</title></svelte:head>
+<svelte:head><title>{t('remotes.list.pageTitle')}</title></svelte:head>
 
 <div class="row">
-	<h1>Remotes rclone</h1>
+	<h1>{t('remotes.list.title')}</h1>
 	<span class="spacer"></span>
-	{#if isAdmin()}<a class="btn primary" href="/remotes/new">Nouveau remote</a>{/if}
+	{#if isAdmin()}<a class="btn primary" href="/remotes/new">{t('remotes.list.new')}</a>{/if}
 </div>
 {#if error}<div class="alert err">{error}</div>{/if}
 
 {#if remotes.length === 0}
-	<div class="card empty">Aucun remote{isAdmin() ? '' : ' accessible'}.</div>
+	<div class="card empty">{t(isAdmin() ? 'remotes.list.empty' : 'remotes.list.emptyAccessible')}</div>
 {:else}
 	<div class="table-wrap">
 		<table>
-			<thead><tr><th>Nom</th><th>Type</th><th>Test</th><th></th></tr></thead>
+			<thead><tr><th>{t('remotes.list.colName')}</th><th>{t('remotes.list.colType')}</th><th>{t('remotes.list.colTest')}</th><th></th></tr></thead>
 			<tbody>
 				{#each remotes as r (r.name)}
-					{@const t = tests[r.name]}
+					{@const res = tests[r.name]}
 					<tr>
 						<td>{#if isAdmin()}<a href="/remotes/{encodeURIComponent(r.name)}">{r.name}</a>{:else}{r.name}{/if}</td>
 						<td class="mono">{r.type}</td>
 						<td class="small">
-							{#if t === 'pending'}<span class="muted">test…</span>
-							{:else if t?.ok}<span class="ok">OK · {t.latencyMs} ms</span>
-							{:else if t}<span class="ko" title={t.error}>Échec : {t.error}</span>{/if}
+							{#if res === 'pending'}<span class="muted">{t('remotes.list.testing')}</span>
+							{:else if res?.ok}<span class="ok">{t('remotes.list.testOk', { ms: res.latencyMs })}</span>
+							{:else if res}<span class="ko" title={res.error}>{t('remotes.list.testFailed', { error: res.error ?? '' })}</span>{/if}
 						</td>
 						<td class="actions">
-							<button onclick={() => test(r.name)} disabled={t === 'pending'}>Tester</button>
-							{#if isAdmin()}<button class="danger" onclick={() => remove(r.name)}>Supprimer</button>{/if}
+							<button onclick={() => test(r.name)} disabled={res === 'pending'}>{t('remotes.list.test')}</button>
+							{#if isAdmin()}<button class="danger" onclick={() => remove(r.name)}>{t('common.delete')}</button>{/if}
 						</td>
 					</tr>
 				{/each}

@@ -4,6 +4,7 @@
 	import { session } from '#lib/session.svelte.ts';
 	import type { Job, JobInput } from '#lib/types.ts';
 	import JobForm from '#lib/components/JobForm.svelte';
+	import { t } from '#lib/i18n/i18n.svelte.ts';
 
 	const initial: JobInput = {
 		name: '',
@@ -25,11 +26,11 @@
 	}
 </script>
 
-<svelte:head><title>Nouveau job · RcsUI</title></svelte:head>
+<svelte:head><title>{t('jobs.new.title')} · RcsUI</title></svelte:head>
 
-<h1>Nouveau job</h1>
+<h1>{t('jobs.new.title')}</h1>
 {#if !session.info?.rsyncVersion && !session.info?.rcloneEnabled}
-	<div class="alert err">Aucun moteur disponible sur ce serveur.</div>
+	<div class="alert err">{t('jobs.new.noEngine')}</div>
 {:else}
-	<JobForm {initial} submitLabel="Créer le job" onsubmit={create} />
+	<JobForm {initial} submitLabel={t('jobs.new.submit')} onsubmit={create} />
 {/if}
