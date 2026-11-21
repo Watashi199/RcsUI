@@ -6,6 +6,8 @@
 	import { setUnauthorizedHandler } from '#lib/api.ts';
 	import { session, loadSession, logout, isAdmin } from '#lib/session.svelte.ts';
 	import { live, startLive, stopLive, activeRuns } from '#lib/live.svelte.ts';
+	import { t } from '#lib/i18n/i18n.svelte.ts';
+	import LocaleSwitch from '#lib/components/LocaleSwitch.svelte';
 
 	let { children } = $props();
 	let error = $state('');
@@ -27,7 +29,7 @@
 			const ok = await loadSession();
 			if (!ok && !PUBLIC.includes(page.url.pathname)) toLogin();
 		} catch (e) {
-			error = 'Serveur injoignable : ' + (e instanceof Error ? e.message : String(e));
+			error = t('common.serverUnreachable', { error: e instanceof Error ? e.message : String(e) });
 		}
 	});
 
@@ -49,15 +51,15 @@
 	}
 
 	const nav = $derived([
-		{ href: '/', label: 'Tableau de bord' },
-		{ href: '/jobs', label: 'Jobs' },
-		{ href: '/runs', label: 'Exécutions' },
-		...(session.info?.rcloneEnabled ? [{ href: '/remotes', label: 'Remotes' }] : []),
-		...(session.info?.sshAvailable && isAdmin() ? [{ href: '/ssh', label: 'SSH' }] : []),
+		{ href: '/', label: t('common.nav.dashboard') },
+		{ href: '/jobs', label: t('common.nav.jobs') },
+		{ href: '/runs', label: t('common.nav.runs') },
+		...(session.info?.rcloneEnabled ? [{ href: '/remotes', label: t('common.nav.remotes') }] : []),
+		...(session.info?.sshAvailable && isAdmin() ? [{ href: '/ssh', label: t('common.nav.ssh') }] : []),
 		...(isAdmin()
 			? [
-					{ href: '/users', label: 'Utilisateurs' },
-					{ href: '/settings', label: 'Réglages' }
+					{ href: '/users', label: t('common.nav.users') },
+					{ href: '/settings', label: t('common.nav.settings') }
 				]
 			: [])
 	]);
@@ -72,9 +74,12 @@
 {#if error}
 	<div class="center"><div class="alert err">{error}</div></div>
 {:else if !session.loaded}
-	<div class="center muted">Chargement…</div>
+	<div class="center muted">{t('common.loading')}</div>
 {:else if !session.user || session.user.mustChangePassword}
-	<main class="bare">{@render children()}</main>
+	<main class="bare">
+		<div class="bare-locale"><LocaleSwitch /></div>
+		{@render children()}
+	</main>
 {:else}
 	<div class="shell">
 		<aside>
@@ -89,13 +94,14 @@
 			</nav>
 			<div class="foot">
 				<div class="small">
-					<span class="dot" class:on={live.connected} title={live.connected ? 'Temps réel connecté' : 'Temps réel déconnecté'}></span>
+					<span class="dot" class:on={live.connected} title={live.connected ? t('common.live.on') : t('common.live.off')}></span>
 					{session.user.username} <span class="muted">· {session.user.role}</span>
 				</div>
 				<div class="row small">
-					<a href="/password">Mot de passe</a>
-					<button class="link" onclick={doLogout}>Déconnexion</button>
+					<a href="/password">{t('common.nav.password')}</a>
+					<button class="link" onclick={doLogout}>{t('common.nav.logout')}</button>
 				</div>
+				<LocaleSwitch />
 				{#if session.info}<div class="muted small">v{session.info.version}</div>{/if}
 			</div>
 		</aside>
@@ -115,6 +121,12 @@
 		display: grid;
 		place-items: center;
 		padding: 1rem;
+		position: relative;
+	}
+	.bare-locale {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
 	}
 	.shell {
 		display: grid;

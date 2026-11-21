@@ -1,6 +1,14 @@
 import type { RunState } from './types.ts';
+import { t, intlLocale, type MessageKey } from './i18n/i18n.svelte.ts';
 
-const UNITS = ['o', 'Kio', 'Mio', 'Gio', 'Tio', 'Pio'];
+const UNITS: MessageKey[] = [
+	'common.unit.b',
+	'common.unit.kib',
+	'common.unit.mib',
+	'common.unit.gib',
+	'common.unit.tib',
+	'common.unit.pib'
+];
 
 export function bytes(n: number | undefined | null): string {
 	if (n === undefined || n === null || !isFinite(n)) return '—';
@@ -10,7 +18,7 @@ export function bytes(n: number | undefined | null): string {
 		v /= 1024;
 		i++;
 	}
-	return `${i === 0 ? v : v.toFixed(v < 10 ? 2 : 1)} ${UNITS[i]}`;
+	return `${i === 0 ? v : v.toFixed(v < 10 ? 2 : 1)} ${t(UNITS[i])}`;
 }
 
 export function speed(bps: number | undefined): string {
@@ -23,9 +31,9 @@ export function duration(sec: number | undefined | null): string {
 	const h = Math.floor(sec / 3600);
 	const m = Math.floor((sec % 3600) / 60);
 	const s = sec % 60;
-	if (h) return `${h} h ${String(m).padStart(2, '0')} min`;
-	if (m) return `${m} min ${String(s).padStart(2, '0')} s`;
-	return `${s} s`;
+	if (h) return t('common.duration.hm', { h, m: String(m).padStart(2, '0') });
+	if (m) return t('common.duration.ms', { m, s: String(s).padStart(2, '0') });
+	return t('common.duration.s', { s });
 }
 
 export function between(a?: string, b?: string): string {
@@ -34,18 +42,28 @@ export function between(a?: string, b?: string): string {
 	return duration((end - new Date(a).getTime()) / 1000);
 }
 
-const dtf = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'medium' });
+// Formateurs mis en cache par langue (leur construction est coûteuse).
+const dtfCache = new Map<string, Intl.DateTimeFormat>();
+function dtf(): Intl.DateTimeFormat {
+	const l = intlLocale();
+	let f = dtfCache.get(l);
+	if (!f) {
+		f = new Intl.DateTimeFormat(l, { dateStyle: 'short', timeStyle: 'medium' });
+		dtfCache.set(l, f);
+	}
+	return f;
+}
 
 export function dateTime(s?: string | number): string {
 	if (s === undefined || s === '') return '—';
 	const d = new Date(s);
-	return isNaN(d.getTime()) ? '—' : dtf.format(d);
+	return isNaN(d.getTime()) ? '—' : dtf().format(d);
 }
 
 export function relative(s?: string): string {
 	if (!s) return '—';
 	const diff = (new Date(s).getTime() - Date.now()) / 1000;
-	const rtf = new Intl.RelativeTimeFormat('fr', { numeric: 'auto' });
+	const rtf = new Intl.RelativeTimeFormat(intlLocale(), { numeric: 'auto' });
 	const abs = Math.abs(diff);
 	if (abs < 60) return rtf.format(Math.round(diff), 'second');
 	if (abs < 3600) return rtf.format(Math.round(diff / 60), 'minute');
@@ -53,18 +71,23 @@ export function relative(s?: string): string {
 	return rtf.format(Math.round(diff / 86400), 'day');
 }
 
-export const STATE_LABEL: Record<RunState, string> = {
-	queued: 'En file',
-	starting: 'Démarrage',
-	running: 'En cours',
-	cancelling: 'Annulation…',
-	succeeded: 'Réussi',
-	partial: 'Partiel',
-	failed: 'Échec',
-	cancelled: 'Annulé',
-	interrupted: 'Interrompu',
-	skipped: 'Ignoré'
+const STATE_KEY: Record<RunState, MessageKey> = {
+	queued: 'common.state.queued',
+	starting: 'common.state.starting',
+	running: 'common.state.running',
+	cancelling: 'common.state.cancelling',
+	succeeded: 'common.state.succeeded',
+	partial: 'common.state.partial',
+	failed: 'common.state.failed',
+	cancelled: 'common.state.cancelled',
+	interrupted: 'common.state.interrupted',
+	skipped: 'common.state.skipped'
 };
+
+/** Libellé traduit d'un état de run. */
+export function stateLabel(s: RunState): string {
+	return STATE_KEY[s] ? t(STATE_KEY[s]) : s;
+}
 
 export function stateTone(s: RunState): 'ok' | 'warn' | 'err' | 'info' | 'muted' {
 	switch (s) {
