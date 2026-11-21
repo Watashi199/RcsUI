@@ -47,6 +47,10 @@ docker logs rcsui   # mot de passe admin initial (affiché une seule fois)
 
 `/data` doit être sur un disque local (SQLite en WAL n'est pas fiable sur NFS/SMB).
 
+Image : `rcsui:dev` est construite localement (`make docker`). Les versions publiées sont sur
+`ghcr.io/watashi199/rcsui:<version>` (amd64 et arm64, SBOM et signature cosign) : procédure de release et
+vérification dans [docs/release.md](docs/release.md).
+
 ### Variables d'environnement
 
 | Variable | Défaut | Rôle |
