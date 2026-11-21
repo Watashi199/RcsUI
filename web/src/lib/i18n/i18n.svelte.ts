@@ -12,14 +12,15 @@ import * as jobs from './messages/jobs.ts';
 import * as runs from './messages/runs.ts';
 import * as admin from './messages/admin.ts';
 import * as remotes from './messages/remotes.ts';
+import * as lib from './messages/lib.ts';
 
 export type Locale = 'fr' | 'en';
 export const LOCALES: readonly Locale[] = ['fr', 'en'];
 export const LOCALE_NAMES: Record<Locale, string> = { fr: 'Français', en: 'English' };
 
-const fr = { ...common.fr, ...jobs.fr, ...runs.fr, ...admin.fr, ...remotes.fr };
+const fr = { ...common.fr, ...jobs.fr, ...runs.fr, ...admin.fr, ...remotes.fr, ...lib.fr };
 export type MessageKey = keyof typeof fr;
-const en: Record<MessageKey, string> = { ...common.en, ...jobs.en, ...runs.en, ...admin.en, ...remotes.en };
+const en: Record<MessageKey, string> = { ...common.en, ...jobs.en, ...runs.en, ...admin.en, ...remotes.en, ...lib.en };
 const catalogs: Record<Locale, Record<MessageKey, string>> = { fr, en };
 
 const STORAGE_KEY = 'rcsui.locale';
