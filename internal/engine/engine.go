@@ -25,6 +25,9 @@ const (
 	ModeCopy Mode = "copy" // ajoute/met à jour, ne supprime rien
 	ModeSync Mode = "sync" // miroir : supprime à la destination ce qui n'existe plus à la source
 	ModeMove Mode = "move" // rclone uniquement en v1
+	// ModeBisync : synchronisation bidirectionnelle (rclone uniquement).
+	// Source = Path1, Destination = Path2.
+	ModeBisync Mode = "bisync"
 )
 
 // EndpointType est le type d'une source ou destination.
@@ -68,6 +71,10 @@ type Spec struct {
 	Source      Endpoint
 	Destination Endpoint
 	DryRun      bool
+	// Resync (bisync uniquement) : reconstruit les listings de référence à
+	// partir de l'union des deux côtés. Requis au premier run et après une
+	// erreur critique ; ne supprime jamais rien.
+	Resync bool
 	// Options propres au moteur, produites par Engine.DecodeOptions.
 	Options any
 }

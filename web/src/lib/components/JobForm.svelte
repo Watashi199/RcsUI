@@ -103,13 +103,53 @@
 		['createEmptySrcDirs', 'Créer les dossiers vides'],
 		['deleteExcluded', 'Supprimer aussi les fichiers exclus (sync)']
 	];
-	const flags = $derived(job.engine === 'rclone' ? RCLONE_FLAGS : RSYNC_FLAGS);
+	// En bisync, seules ces options génériques ont un sens (le serveur refuse les autres).
+	const BISYNC_FLAGS = new Set(['createEmptySrcDirs']);
+	const isBisync = $derived(job.mode === 'bisync');
+	const flags = $derived(
+		job.engine === 'rclone' ? RCLONE_FLAGS.filter(([k]) => !isBisync || BISYNC_FLAGS.has(k)) : RSYNC_FLAGS
+	);
+
+	// Options du mode bisync (options.bisync).
+	type BisyncOpts = Record<string, string | number | boolean | undefined>;
+	function bopts(): BisyncOpts {
+		return (job.options.bisync ??= {}) as BisyncOpts;
+	}
+	function bval(key: string): string {
+		const v = (job.options.bisync as BisyncOpts | undefined)?.[key];
+		return v === undefined ? '' : String(v);
+	}
+	function setB(key: string, v: string | number | boolean) {
+		const b = bopts();
+		if (v === '' || v === false) delete b[key];
+		else b[key] = v;
+	}
+	const COMPARE = ['size', 'modtime', 'checksum'] as const;
+	const COMPARE_LABEL: Record<string, string> = { size: 'Taille', modtime: 'Date', checksum: 'Somme de contrôle' };
+	function compareHas(c: string): boolean {
+		return bval('compare').split(',').includes(c);
+	}
+	function toggleCompare(c: string, on: boolean) {
+		const cur = new Set(bval('compare').split(',').filter(Boolean));
+		if (on) cur.add(c);
+		else cur.delete(c);
+		setB('compare', COMPARE.filter((x) => cur.has(x)).join(','));
+	}
+
+	// Options génériques refusées par le serveur en bisync.
+	const NOT_BISYNC = ['checksum', 'sizeOnly', 'update', 'ignoreExisting', 'trackRenames', 'deleteExcluded',
+		'deleteEmptySrcDirs', 'maxDelete', 'maxAge', 'minAge', 'maxSize', 'minSize'];
+	function setMode(m: JobInput['mode']) {
+		job.mode = m;
+		if (m === 'bisync') for (const k of NOT_BISYNC) delete job.options[k];
+		else delete job.options.bisync;
+	}
 
 	function setEngine(e: EngineKind) {
 		job.engine = e;
 		job.options = { v: 1 };
 		if (e === 'rsync') {
-			if (job.mode === 'move') job.mode = 'copy';
+			if (job.mode === 'move' || job.mode === 'bisync') job.mode = 'copy';
 			for (const side of ['source', 'destination'] as const) {
 				if (job[side].type !== 'local') job[side] = { type: 'local', path: '' };
 			}
@@ -152,6 +192,7 @@
 		if (inc.length) opts.includes = inc;
 		else delete opts.includes;
 		for (const [k, v] of Object.entries(opts)) if (v === false || v === '' || v === null) delete opts[k];
+		if (job.mode !== 'bisync') delete opts.bisync;
 		return {
 			...$state.snapshot(job),
 			options: opts,
@@ -230,10 +271,13 @@
 			</div>
 			<div class="field">
 				<label for="mode">Mode</label>
-				<select id="mode" bind:value={job.mode}>
+				<select id="mode" value={job.mode} onchange={(e) => setMode(e.currentTarget.value as JobInput['mode'])}>
 					<option value="copy">Copie (ne supprime rien)</option>
 					<option value="sync">Synchronisation miroir (supprime à la destination)</option>
-					{#if job.engine === 'rclone'}<option value="move">Déplacement</option>{/if}
+					{#if job.engine === 'rclone'}
+						<option value="move">Déplacement</option>
+						<option value="bisync">Bidirectionnelle (bisync)</option>
+					{/if}
 				</select>
 			</div>
 		</div>
@@ -241,7 +285,9 @@
 
 	{#each ['source', 'destination'] as const as side (side)}
 		<div class="card">
-			<h2>{side === 'source' ? 'Source' : 'Destination'}</h2>
+			<h2>
+				{#if isBisync}{side === 'source' ? 'Chemin 1' : 'Chemin 2'}{:else}{side === 'source' ? 'Source' : 'Destination'}{/if}
+			</h2>
 			<div class="row">
 				{#each endpointTypes as t (t)}
 					<label class="check"
@@ -350,12 +396,14 @@
 					<label for="ck">Vérifications parallèles</label>
 					<input id="ck" type="number" min="1" max="128" value={numOpt('checkers')} oninput={(e) => setNum('checkers', e.currentTarget.value)} />
 				</div>
-				<div class="field">
-					<label for="ma">Âge max (ex. 7d)</label>
-					<input id="ma" value={job.options.maxAge ?? ''} oninput={(e) => (job.options.maxAge = e.currentTarget.value)} />
-				</div>
+				{#if !isBisync}
+					<div class="field">
+						<label for="ma">Âge max (ex. 7d)</label>
+						<input id="ma" value={job.options.maxAge ?? ''} oninput={(e) => (job.options.maxAge = e.currentTarget.value)} />
+					</div>
+				{/if}
 			{/if}
-			{#if job.mode !== 'copy'}
+			{#if job.mode !== 'copy' && !isBisync}
 				<div class="field">
 					<label for="md">Suppressions max (garde-fou)</label>
 					<input id="md" type="number" min="0" value={numOpt('maxDelete')} oninput={(e) => setNum('maxDelete', e.currentTarget.value)} />
@@ -376,6 +424,89 @@
 			<div class="error small">{k} : {v}</div>
 		{/each}
 	</div>
+
+	{#if isBisync}
+		<div class="card">
+			<h2>Synchronisation bidirectionnelle</h2>
+			<div class="alert warn small">
+				Les changements (ajouts, modifications, suppressions) de chaque côté sont propagés à l'autre. Le
+				<strong>premier run doit être un resync</strong> (bouton « Resync » sur la page du job), de même après une
+				modification des filtres ou une erreur critique. Un resync fusionne les deux côtés et ne supprime jamais rien.
+			</div>
+			<div class="grid2">
+				<div class="field">
+					<label for="bcr">Conflit (fichier modifié des deux côtés)</label>
+					<select id="bcr" value={bval('conflictResolve')} onchange={(e) => setB('conflictResolve', e.currentTarget.value)}>
+						<option value="">Garder les deux versions (défaut)</option>
+						<option value="newer">Le plus récent gagne</option>
+						<option value="older">Le plus ancien gagne</option>
+						<option value="larger">Le plus gros gagne</option>
+						<option value="smaller">Le plus petit gagne</option>
+						<option value="path1">Chemin 1 gagne</option>
+						<option value="path2">Chemin 2 gagne</option>
+					</select>
+				</div>
+				<div class="field">
+					<label for="bcl">Version perdante</label>
+					<select id="bcl" value={bval('conflictLoser')} onchange={(e) => setB('conflictLoser', e.currentTarget.value)}>
+						<option value="">Renommer avec un numéro (défaut)</option>
+						<option value="pathname">Renommer avec le nom du chemin</option>
+						<option value="delete">Supprimer</option>
+					</select>
+				</div>
+				<div class="field">
+					<label for="bcs">Suffixe des conflits</label>
+					<input id="bcs" class="mono" placeholder="conflict" value={bval('conflictSuffix')}
+						oninput={(e) => setB('conflictSuffix', e.currentTarget.value.trim())} />
+				</div>
+				<div class="field">
+					<label for="brm">Lors d'un resync, en cas de différence</label>
+					<select id="brm" value={bval('resyncMode')} onchange={(e) => setB('resyncMode', e.currentTarget.value)}>
+						<option value="">Chemin 1 gagne (défaut)</option>
+						<option value="path2">Chemin 2 gagne</option>
+						<option value="newer">Le plus récent gagne</option>
+						<option value="older">Le plus ancien gagne</option>
+						<option value="larger">Le plus gros gagne</option>
+						<option value="smaller">Le plus petit gagne</option>
+					</select>
+				</div>
+				<div class="field">
+					<label for="bmd">Suppressions max (% des fichiers, défaut 50)</label>
+					<input id="bmd" type="number" min="0" max="100" value={bval('maxDeletePercent')}
+						oninput={(e) => setB('maxDeletePercent', e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} />
+				</div>
+				<fieldset class="field plain">
+					<legend>Comparer par (défaut : taille et date)</legend>
+					<div class="row">
+						{#each COMPARE as c (c)}
+							<label class="check"
+								><input type="checkbox" checked={compareHas(c)} onchange={(e) => toggleCompare(c, e.currentTarget.checked)} />
+								{COMPARE_LABEL[c]}</label
+							>
+						{/each}
+					</div>
+				</fieldset>
+			</div>
+			<div class="flags">
+				<label class="check"
+					><input type="checkbox" checked={!bval('noRecover')} onchange={(e) => setB('noRecover', !e.currentTarget.checked)} />
+					Reprendre proprement après une interruption (sans resync)</label
+				>
+				<label class="check"
+					><input type="checkbox" checked={!!bval('resilient')} onchange={(e) => setB('resilient', e.currentTarget.checked)} />
+					Tolérer les erreurs non critiques (pas de resync imposé au run suivant)</label
+				>
+				<label class="check"
+					><input type="checkbox" checked={!!bval('removeEmptyDirs')} onchange={(e) => setB('removeEmptyDirs', e.currentTarget.checked)} />
+					Supprimer les dossiers vides</label
+				>
+				<label class="check"
+					><input type="checkbox" checked={!!bval('checkAccess')} onchange={(e) => setB('checkAccess', e.currentTarget.checked)} />
+					Exiger les fichiers témoins RCLONE_TEST des deux côtés</label
+				>
+			</div>
+		</div>
+	{/if}
 
 	<div class="card">
 		<h2>Planification</h2>
@@ -493,6 +624,14 @@
 	}
 	.error {
 		color: var(--err);
+	}
+	fieldset.plain {
+		border: 0;
+		padding: 0;
+		margin: 0;
+	}
+	fieldset.plain legend {
+		padding: 0;
 	}
 	pre {
 		white-space: pre-wrap;

@@ -105,25 +105,67 @@ func migrate(ctx context.Context, db *sql.DB, backupDir string) error {
 			return fmt.Errorf("pre-migration backup: %w", err)
 		}
 	}
+	// Connexion épinglée : PRAGMA foreign_keys est propre à une connexion et
+	// sans effet à l'intérieur d'une transaction.
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
 	for _, m := range pending {
-		tx, err := db.BeginTx(ctx, nil)
-		if err != nil {
-			return err
-		}
-		if _, err := tx.ExecContext(ctx, m.sql); err != nil {
-			tx.Rollback()
-			return fmt.Errorf("migration %s: %w", m.name, err)
-		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations(version, checksum, applied_at) VALUES (?,?,?)`,
-			m.version, m.checksum, now()); err != nil {
-			tx.Rollback()
-			return err
-		}
-		if err := tx.Commit(); err != nil {
+		if err := applyMigration(ctx, conn, m); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// fkOffMarker, en tête d'une migration, la fait exécuter clés étrangères
+// désactivées (recréation de table : sinon le DROP déclencherait les actions
+// ON DELETE des tables qui la référencent). L'intégrité est vérifiée par
+// PRAGMA foreign_key_check avant le commit.
+const fkOffMarker = "-- rcsui:foreign-keys-off"
+
+func applyMigration(ctx context.Context, conn *sql.Conn, m migration) (err error) {
+	fkOff := strings.HasPrefix(m.sql, fkOffMarker)
+	if fkOff {
+		if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys=OFF`); err != nil {
+			return err
+		}
+		defer func() {
+			if _, e := conn.ExecContext(ctx, `PRAGMA foreign_keys=ON`); e != nil && err == nil {
+				err = e
+			}
+		}()
+	}
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+	if _, err := tx.ExecContext(ctx, m.sql); err != nil {
+		return fmt.Errorf("migration %s: %w", m.name, err)
+	}
+	if fkOff {
+		rows, err := tx.QueryContext(ctx, `PRAGMA foreign_key_check`)
+		if err != nil {
+			return fmt.Errorf("migration %s: foreign_key_check: %w", m.name, err)
+		}
+		bad := rows.Next()
+		rows.Close()
+		if bad {
+			return fmt.Errorf("migration %s: foreign key violations after migration", m.name)
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations(version, checksum, applied_at) VALUES (?,?,?)`,
+		m.version, m.checksum, now()); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func backup(ctx context.Context, db *sql.DB, dir string, version int) error {
