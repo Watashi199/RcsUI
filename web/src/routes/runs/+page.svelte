@@ -4,12 +4,13 @@
 	import { bytes, between, dateTime } from '#lib/format.ts';
 	import { ACTIVE_STATES, type Run } from '#lib/types.ts';
 	import StateBadge from '#lib/components/StateBadge.svelte';
+	import { t, type MessageKey } from '#lib/i18n/i18n.svelte.ts';
 
-	const FILTERS: [string, string][] = [
-		['', 'Tous'],
-		[ACTIVE_STATES.join(','), 'Actifs'],
-		['failed,partial', 'Échecs / partiels'],
-		['succeeded', 'Réussis']
+	const FILTERS: [string, MessageKey][] = [
+		['', 'runs.list.filter.all'],
+		[ACTIVE_STATES.join(','), 'runs.list.filter.active'],
+		['failed,partial', 'runs.list.filter.failed'],
+		['succeeded', 'runs.list.filter.succeeded']
 	];
 	let filter = $state('');
 	let runs = $state<Run[]>([]);
@@ -43,26 +44,26 @@
 	}
 </script>
 
-<svelte:head><title>Exécutions · RcsUI</title></svelte:head>
+<svelte:head><title>{t('runs.list.title')} · RcsUI</title></svelte:head>
 
 <div class="row">
-	<h1>Exécutions</h1>
+	<h1>{t('runs.list.title')}</h1>
 	<span class="spacer"></span>
-	<div class="row" role="group" aria-label="Filtre">
+	<div class="row" role="group" aria-label={t('runs.list.filter')}>
 		{#each FILTERS as [v, label] (v)}
-			<button class:primary={filter === v} onclick={() => (filter = v)}>{label}</button>
+			<button class:primary={filter === v} onclick={() => (filter = v)}>{t(label)}</button>
 		{/each}
 	</div>
 </div>
 {#if error}<div class="alert err">{error}</div>{/if}
 
 {#if runs.length === 0}
-	<div class="card empty">Aucune exécution.</div>
+	<div class="card empty">{t('runs.list.empty')}</div>
 {:else}
 	<div class="table-wrap">
 		<table>
 			<thead>
-				<tr><th>Job</th><th>État</th><th>Début</th><th>Durée</th><th class="hide-sm">Transféré</th><th class="hide-sm">Erreurs</th></tr>
+				<tr><th>{t('runs.list.col.job')}</th><th>{t('runs.list.col.state')}</th><th>{t('runs.list.col.start')}</th><th>{t('runs.list.col.duration')}</th><th class="hide-sm">{t('runs.list.col.transferred')}</th><th class="hide-sm">{t('runs.list.col.errors')}</th></tr>
 			</thead>
 			<tbody>
 				{#each runs as r (r.id)}
@@ -72,12 +73,12 @@
 						<td><StateBadge state={st} dryRun={r.dryRun} /> <span class="small muted">{progressOf(r)}</span></td>
 						<td class="small">{dateTime(r.queuedAt)}</td>
 						<td class="small">{between(r.startedAt, r.finishedAt)}</td>
-						<td class="hide-sm small">{bytes(r.bytesDone)} · {r.filesDone} f.</td>
+						<td class="hide-sm small">{bytes(r.bytesDone)} · {t('runs.list.files', { n: r.filesDone })}</td>
 						<td class="hide-sm small">{r.errors || ''}</td>
 					</tr>
 				{/each}
 			</tbody>
 		</table>
 	</div>
-	{#if cursor}<button style="margin-top:0.6rem" onclick={more}>Plus…</button>{/if}
+	{#if cursor}<button style="margin-top:0.6rem" onclick={more}>{t('runs.more')}</button>{/if}
 {/if}

@@ -8,6 +8,7 @@
 	import { ACTIVE_STATES, type Item, type LogRecord, type Progress, type Run, type RunState, type StateEvent } from '#lib/types.ts';
 	import StateBadge from '#lib/components/StateBadge.svelte';
 	import ProgressBar from '#lib/components/ProgressBar.svelte';
+	import { t, intlLocale, type MessageKey } from '#lib/i18n/i18n.svelte.ts';
 
 	const MAX_LINES = 5000;
 	const id = $derived(page.params.id ?? '');
@@ -174,7 +175,7 @@
 	});
 
 	async function cancel() {
-		if (!confirm('Annuler cette exécution ?')) return;
+		if (!confirm(t('runs.detail.cancelConfirm'))) return;
 		try {
 			await post(`/runs/${id}/cancel`);
 		} catch (e) {
@@ -191,11 +192,16 @@
 	}
 
 	const canRun = $derived(run?.permission === 'run' || run?.permission === 'edit');
-	const fmtTime = (t: number) => new Date(t).toLocaleTimeString('fr-FR');
+	const fmtTime = (ts: number) => new Date(ts).toLocaleTimeString(intlLocale());
+	const TRIGGERS: Record<Run['trigger'], MessageKey> = {
+		manual: 'runs.detail.trigger.manual',
+		schedule: 'runs.detail.trigger.schedule',
+		retry: 'runs.detail.trigger.retry'
+	};
 </script>
 
 <svelte:document onvisibilitychange={onVisibility} />
-<svelte:head><title>{run?.jobName ?? 'Exécution'} · RcsUI</title></svelte:head>
+<svelte:head><title>{run?.jobName ?? t('runs.detail.title')} · RcsUI</title></svelte:head>
 
 {#if error}<div class="alert err">{error}</div>{/if}
 {#if run}
@@ -203,25 +209,25 @@
 		<h1>{run.jobName}</h1>
 		<StateBadge state={runState} dryRun={run.dryRun} />
 		<span class="spacer"></span>
-		{#if canRun && active}<button class="danger" onclick={cancel} disabled={runState === 'cancelling'}>Annuler</button>{/if}
-		{#if canRun && !active && run.jobId}<button onclick={retry}>Relancer</button>{/if}
-		{#if run.jobId}<a class="btn" href="/jobs/{run.jobId}">Voir le job</a>{/if}
+		{#if canRun && active}<button class="danger" onclick={cancel} disabled={runState === 'cancelling'}>{t('runs.detail.cancel')}</button>{/if}
+		{#if canRun && !active && run.jobId}<button onclick={retry}>{t('runs.detail.retry')}</button>{/if}
+		{#if run.jobId}<a class="btn" href="/jobs/{run.jobId}">{t('runs.detail.viewJob')}</a>{/if}
 	</div>
 
 	<div class="card">
 		<ProgressBar p={progress} />
 		<div class="meta small muted">
-			<span>Mis en file : {dateTime(run.queuedAt)}</span>
-			<span>Durée : {between(run.startedAt, run.finishedAt)}</span>
-			<span>Déclencheur : {run.trigger}{run.attempt > 1 ? ` (tentative ${run.attempt})` : ''}</span>
-			{#if run.exitCode !== undefined}<span>Code de sortie : {run.exitCode}</span>{/if}
-			<span>Moteur : {run.engine}</span>
+			<span>{t('runs.detail.queuedAt', { date: dateTime(run.queuedAt) })}</span>
+			<span>{t('runs.detail.duration', { duration: between(run.startedAt, run.finishedAt) })}</span>
+			<span>{t('runs.detail.trigger', { trigger: TRIGGERS[run.trigger] ? t(TRIGGERS[run.trigger]) : run.trigger })}{run.attempt > 1 ? t('runs.detail.attempt', { n: run.attempt }) : ''}</span>
+			{#if run.exitCode !== undefined}<span>{t('runs.detail.exitCode', { code: run.exitCode })}</span>{/if}
+			<span>{t('runs.detail.engine', { engine: run.engine })}</span>
 		</div>
 		{#if run.error && !active}<div class="alert err" style="margin:0.6rem 0 0">{run.error}</div>{/if}
 	</div>
 
 	<div class="tabs row">
-		<button class:primary={tab === 'logs'} onclick={() => (tab = 'logs')}>Logs</button>
+		<button class:primary={tab === 'logs'} onclick={() => (tab = 'logs')}>{t('runs.detail.tab.logs')}</button>
 		<button
 			class:primary={tab === 'items'}
 			onclick={() => {
@@ -229,25 +235,25 @@
 				void loadItems(true);
 			}}
 		>
-			Changements{run.dryRun ? ' prévus' : ''}
+			{run.dryRun ? t('runs.detail.tab.plannedChanges') : t('runs.detail.tab.changes')}
 		</button>
 		<span class="spacer"></span>
 		{#if tab === 'logs'}
-			<select bind:value={level} onchange={() => loadLogs(true)} aria-label="Niveau minimal" style="width:auto">
-				<option value="">Tous niveaux</option>
-				<option value="info">Info+</option>
-				<option value="warn">Avertissements+</option>
-				<option value="error">Erreurs</option>
+			<select bind:value={level} onchange={() => loadLogs(true)} aria-label={t('runs.detail.level')} style="width:auto">
+				<option value="">{t('runs.detail.level.all')}</option>
+				<option value="info">{t('runs.detail.level.info')}</option>
+				<option value="warn">{t('runs.detail.level.warn')}</option>
+				<option value="error">{t('runs.detail.level.error')}</option>
 			</select>
-			<label class="check"><input type="checkbox" bind:checked={follow} onchange={scrollDown} /> Suivre</label>
-			<a class="btn" href="/api/v1/runs/{id}/logs.ndjson" download>Télécharger</a>
+			<label class="check"><input type="checkbox" bind:checked={follow} onchange={scrollDown} /> {t('runs.detail.follow')}</label>
+			<a class="btn" href="/api/v1/runs/{id}/logs.ndjson" download>{t('runs.detail.download')}</a>
 		{:else}
-			<select bind:value={itemOp} onchange={() => loadItems(true)} aria-label="Opération" style="width:auto">
-				<option value="">Toutes opérations</option>
-				<option value="transfer">Transferts</option>
-				<option value="delete">Suppressions</option>
-				<option value="create">Créations</option>
-				<option value="attrs">Attributs</option>
+			<select bind:value={itemOp} onchange={() => loadItems(true)} aria-label={t('runs.detail.op')} style="width:auto">
+				<option value="">{t('runs.detail.op.all')}</option>
+				<option value="transfer">{t('runs.detail.op.transfer')}</option>
+				<option value="delete">{t('runs.detail.op.delete')}</option>
+				<option value="create">{t('runs.detail.op.create')}</option>
+				<option value="attrs">{t('runs.detail.op.attrs')}</option>
 			</select>
 		{/if}
 	</div>
@@ -257,28 +263,28 @@
 			{#each lines as l, i (i)}
 				<div class="line {l.lvl}"><span class="t">{fmtTime(l.t)}</span> <span class="s">{l.s}</span> {l.msg}</div>
 			{/each}
-			{#if lines.length === 0}<div class="muted">Aucun log.</div>{/if}
+			{#if lines.length === 0}<div class="muted">{t('runs.detail.noLogs')}</div>{/if}
 		</div>
 		{#if lines.length >= MAX_LINES}
-			<div class="muted small">Seules les {MAX_LINES} dernières lignes sont affichées ; téléchargez le log complet.</div>
+			<div class="muted small">{t('runs.detail.truncated', { n: MAX_LINES })}</div>
 		{/if}
 	{:else}
 		<div class="table-wrap">
 			<table class="items">
-				<thead><tr><th>Opération</th><th>Chemin</th><th>Taille</th></tr></thead>
+				<thead><tr><th>{t('runs.detail.col.op')}</th><th>{t('runs.detail.col.path')}</th><th>{t('runs.detail.col.size')}</th></tr></thead>
 				<tbody>
 					{#each items as it, i (i)}
 						<tr>
-							<td class="op {it.op}">{it.op}{it.kind === 'd' ? ' (dossier)' : ''}</td>
+							<td class="op {it.op}">{it.op}{it.kind === 'd' ? t('runs.detail.dir') : ''}</td>
 							<td class="mono path">{it.path}</td>
 							<td class="small">{it.op === 'delete' ? '' : bytes(it.size)}</td>
 						</tr>
 					{/each}
-					{#if items.length === 0}<tr><td colspan="3" class="empty">Aucun changement.</td></tr>{/if}
+					{#if items.length === 0}<tr><td colspan="3" class="empty">{t('runs.detail.noChanges')}</td></tr>{/if}
 				</tbody>
 			</table>
 		</div>
-		{#if !itemsEof && items.length}<button style="margin-top:0.6rem" onclick={() => loadItems()}>Plus…</button>{/if}
+		{#if !itemsEof && items.length}<button style="margin-top:0.6rem" onclick={() => loadItems()}>{t('runs.more')}</button>{/if}
 	{/if}
 {/if}
 

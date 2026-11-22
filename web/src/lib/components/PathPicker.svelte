@@ -2,6 +2,7 @@
 	import { get, qs, errorMessage } from '#lib/api.ts';
 	import { bytes } from '#lib/format.ts';
 	import type { BrowseEntry } from '#lib/types.ts';
+	import { t } from '#lib/i18n/i18n.svelte.ts';
 
 	let {
 		loc,
@@ -61,22 +62,22 @@
 			roots = r.roots;
 			const initial = start && roots.some((x) => start === x || start.startsWith(x + sep)) ? start : roots[0];
 			if (initial) await open(initial);
-			else error = 'Aucune racine locale autorisée.';
+			else error = t('runs.picker.noRoots');
 		} else {
 			await open(start);
 		}
 	})();
 </script>
 
-<dialog bind:this={dialog} onclose={onclose} aria-label="Choisir un dossier">
+<dialog bind:this={dialog} onclose={onclose} aria-label={t('runs.picker.title')}>
 	<div class="head row">
-		<strong>{loc === 'local' ? 'Dossier local' : `Remote ${remote}:`}</strong>
+		<strong>{loc === 'local' ? t('runs.picker.local') : t('runs.picker.remote', { remote })}</strong>
 		<span class="spacer"></span>
-		<button type="button" onclick={() => dialog?.close()} aria-label="Fermer">✕</button>
+		<button type="button" onclick={() => dialog?.close()} aria-label={t('common.close')}>✕</button>
 	</div>
 	{#if loc === 'local' && roots.length > 1}
 		<div class="row small">
-			Racines :
+			{t('runs.picker.roots')}
 			{#each roots as r (r)}<button type="button" class="chip" onclick={() => open(r)}>{r}</button>{/each}
 		</div>
 	{/if}
@@ -95,14 +96,14 @@
 				{/if}
 			</li>
 		{/each}
-		{#if !loading && entries.length === 0 && !error}<li class="muted small">Dossier vide.</li>{/if}
+		{#if !loading && entries.length === 0 && !error}<li class="muted small">{t('runs.picker.empty')}</li>{/if}
 	</ul>
-	{#if truncated}<div class="muted small">Liste tronquée (2000 entrées max).</div>{/if}
+	{#if truncated}<div class="muted small">{t('runs.picker.truncated')}</div>{/if}
 	<div class="row foot">
 		<span class="spacer"></span>
-		<button type="button" onclick={() => dialog?.close()}>Annuler</button>
+		<button type="button" onclick={() => dialog?.close()}>{t('common.cancel')}</button>
 		<button type="button" class="primary" disabled={loading || !!error} onclick={() => { onpick(path); dialog?.close(); }}>
-			Choisir ce dossier
+			{t('runs.picker.choose')}
 		</button>
 	</div>
 </dialog>

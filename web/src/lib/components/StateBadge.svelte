@@ -1,12 +1,13 @@
 <script lang="ts">
-	import { STATE_LABEL, stateTone } from '#lib/format.ts';
+	import { stateLabel, stateTone } from '#lib/format.ts';
 	import type { RunState } from '#lib/types.ts';
+	import { t } from '#lib/i18n/i18n.svelte.ts';
 
 	let { state, dryRun = false }: { state: RunState; dryRun?: boolean } = $props();
 </script>
 
-<span class="badge {stateTone(state)}">{STATE_LABEL[state] ?? state}</span>
-{#if dryRun}<span class="badge dry">dry-run</span>{/if}
+<span class="badge {stateTone(state)}">{stateLabel(state)}</span>
+{#if dryRun}<span class="badge dry">{t('common.dryRun')}</span>{/if}
 
 <style>
 	.badge {

@@ -4,6 +4,7 @@
 	import { get, put, errorMessage } from '#lib/api.ts';
 	import type { Job, JobInput } from '#lib/types.ts';
 	import JobForm from '#lib/components/JobForm.svelte';
+	import { t } from '#lib/i18n/i18n.svelte.ts';
 
 	const id = $derived(page.params.id);
 	let initial = $state<JobInput | null>(null);
@@ -35,10 +36,10 @@
 	}
 </script>
 
-<svelte:head><title>Modifier le job · RcsUI</title></svelte:head>
+<svelte:head><title>{t('jobs.edit.title')} · RcsUI</title></svelte:head>
 
-<h1>Modifier le job</h1>
+<h1>{t('jobs.edit.title')}</h1>
 {#if error}<div class="alert err">{error}</div>{/if}
 {#if initial}
-	<JobForm {initial} submitLabel="Enregistrer" onsubmit={save} />
+	<JobForm {initial} submitLabel={t('common.save')} onsubmit={save} />
 {/if}

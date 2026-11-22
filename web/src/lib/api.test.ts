@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { api, ApiError, errorMessage, qs, setCsrfToken, setUnauthorizedHandler } from './api.ts';
+import { t } from './i18n/i18n.svelte.ts';
 
 function mockFetch(status: number, body: unknown) {
 	const fn = vi.fn(async (_url: string, init: RequestInit) => {
@@ -27,7 +28,7 @@ describe('api', () => {
 		const err = (await api('POST', '/jobs', {}).catch((e: unknown) => e)) as ApiError;
 		expect(err).toBeInstanceOf(ApiError);
 		expect(err.code).toBe('validation');
-		expect(errorMessage(err)).toBe('source.path : outside roots');
+		expect(errorMessage(err)).toBe(t('lib.api.fieldError', { field: 'source.path', message: 'outside roots' }));
 	});
 
 	it('appelle le gestionnaire sur 401 (sauf login)', async () => {

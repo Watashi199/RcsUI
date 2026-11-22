@@ -5,6 +5,7 @@
 	import { dateTime } from '#lib/format.ts';
 	import type { Endpoint, EngineKind, JobInput, RemoteSummary, SSHIdentityInfo } from '#lib/types.ts';
 	import { isAdmin } from '#lib/session.svelte.ts';
+	import { t, type MessageKey } from '#lib/i18n/i18n.svelte.ts';
 	import PathPicker from './PathPicker.svelte';
 
 	let {
@@ -57,10 +58,10 @@
 	async function testSSH(side: 'source' | 'destination') {
 		const ssh = job[side].ssh;
 		if (!ssh) return;
-		sshTest[side] = 'Test en cours…';
+		sshTest[side] = t('jobs.form.ssh.testing');
 		try {
 			const r = await post<{ ok: boolean; error?: string; output?: string }>('/ssh/test', $state.snapshot(ssh));
-			sshTest[side] = r.ok ? '✔ Connexion réussie' : `✘ ${r.error ?? 'échec'}${r.output ? ' — ' + r.output : ''}`;
+			sshTest[side] = r.ok ? t('jobs.form.ssh.ok') : `✘ ${r.error ?? t('jobs.form.ssh.failed')}${r.output ? ' — ' + r.output : ''}`;
 		} catch (e) {
 			sshTest[side] = '✘ ' + errorMessage(e);
 		}
@@ -75,33 +76,37 @@
 	const endpointTypes = $derived<readonly Endpoint['type'][]>(
 		job.engine === 'rclone' ? ['local', 'remote'] : session.info?.sshAvailable ? ['local', 'ssh'] : ['local']
 	);
-	const TYPE_LABEL: Record<Endpoint['type'], string> = { local: 'Chemin local', remote: 'Remote rclone', ssh: 'Hôte SSH' };
+	const TYPE_LABEL: Record<Endpoint['type'], MessageKey> = {
+		local: 'jobs.form.type.local',
+		remote: 'jobs.form.type.remote',
+		ssh: 'jobs.form.type.ssh'
+	};
 
 	// Options booléennes exposées par moteur (liste blanche côté serveur).
-	const RSYNC_FLAGS: [string, string][] = [
-		['checksum', 'Comparer par somme de contrôle (-c)'],
-		['compress', 'Compresser pendant le transfert (-z)'],
-		['partial', 'Conserver les fichiers partiels (--partial)'],
-		['hardLinks', 'Préserver les liens physiques (-H)'],
-		['sparse', 'Fichiers creux (-S)'],
-		['update', 'Ne pas écraser les fichiers plus récents (-u)'],
-		['ignoreExisting', 'Ignorer les fichiers existants'],
-		['oneFileSystem', 'Rester sur le même système de fichiers (-x)'],
-		['sizeOnly', 'Comparer la taille uniquement'],
-		['fakeSuper', 'Stocker propriétaires/permissions en xattrs (--fake-super)'],
-		['acls', 'ACL (-A)'],
-		['xattrs', 'Attributs étendus (-X)'],
-		['deleteExcluded', 'Supprimer aussi les fichiers exclus (sync)'],
-		['accurateProgress', 'Progression exacte (scan complet préalable)']
+	const RSYNC_FLAGS: [string, MessageKey][] = [
+		['checksum', 'jobs.form.flag.rsync.checksum'],
+		['compress', 'jobs.form.flag.rsync.compress'],
+		['partial', 'jobs.form.flag.rsync.partial'],
+		['hardLinks', 'jobs.form.flag.rsync.hardLinks'],
+		['sparse', 'jobs.form.flag.rsync.sparse'],
+		['update', 'jobs.form.flag.rsync.update'],
+		['ignoreExisting', 'jobs.form.flag.ignoreExisting'],
+		['oneFileSystem', 'jobs.form.flag.rsync.oneFileSystem'],
+		['sizeOnly', 'jobs.form.flag.sizeOnly'],
+		['fakeSuper', 'jobs.form.flag.rsync.fakeSuper'],
+		['acls', 'jobs.form.flag.rsync.acls'],
+		['xattrs', 'jobs.form.flag.rsync.xattrs'],
+		['deleteExcluded', 'jobs.form.flag.deleteExcluded'],
+		['accurateProgress', 'jobs.form.flag.rsync.accurateProgress']
 	];
-	const RCLONE_FLAGS: [string, string][] = [
-		['checksum', 'Comparer par somme de contrôle'],
-		['sizeOnly', 'Comparer la taille uniquement'],
-		['update', 'Ne pas écraser les fichiers plus récents'],
-		['ignoreExisting', 'Ignorer les fichiers existants'],
-		['trackRenames', 'Détecter les renommages (sync)'],
-		['createEmptySrcDirs', 'Créer les dossiers vides'],
-		['deleteExcluded', 'Supprimer aussi les fichiers exclus (sync)']
+	const RCLONE_FLAGS: [string, MessageKey][] = [
+		['checksum', 'jobs.form.flag.checksum'],
+		['sizeOnly', 'jobs.form.flag.sizeOnly'],
+		['update', 'jobs.form.flag.update'],
+		['ignoreExisting', 'jobs.form.flag.ignoreExisting'],
+		['trackRenames', 'jobs.form.flag.trackRenames'],
+		['createEmptySrcDirs', 'jobs.form.flag.createEmptySrcDirs'],
+		['deleteExcluded', 'jobs.form.flag.deleteExcluded']
 	];
 	// En bisync, seules ces options génériques ont un sens (le serveur refuse les autres).
 	const BISYNC_FLAGS = new Set(['createEmptySrcDirs']);
@@ -125,7 +130,11 @@
 		else b[key] = v;
 	}
 	const COMPARE = ['size', 'modtime', 'checksum'] as const;
-	const COMPARE_LABEL: Record<string, string> = { size: 'Taille', modtime: 'Date', checksum: 'Somme de contrôle' };
+	const COMPARE_LABEL: Record<string, MessageKey> = {
+		size: 'jobs.form.bisync.compare.size',
+		modtime: 'jobs.form.bisync.compare.modtime',
+		checksum: 'jobs.form.bisync.compare.checksum'
+	};
 	function compareHas(c: string): boolean {
 		return bval('compare').split(',').includes(c);
 	}
@@ -202,7 +211,7 @@
 
 	function handleError(e: unknown) {
 		fields = e instanceof ApiError ? e.fields : {};
-		error = Object.keys(fields).length ? 'Le formulaire contient des erreurs.' : errorMessage(e);
+		error = Object.keys(fields).length ? t('jobs.form.invalid') : errorMessage(e);
 	}
 
 	async function doPreview() {
@@ -259,24 +268,24 @@
 	<div class="card">
 		<div class="grid2">
 			<div class="field">
-				<label for="name">Nom</label>
+				<label for="name">{t('jobs.form.name')}</label>
 				<input id="name" bind:value={job.name} maxlength="100" required />
 				{#if fe('name')}<div class="error">{fe('name')}</div>{/if}
 			</div>
 			<div class="field">
-				<label for="engine">Moteur</label>
+				<label for="engine">{t('jobs.form.engine')}</label>
 				<select id="engine" value={job.engine} onchange={(e) => setEngine(e.currentTarget.value as EngineKind)}>
 					{#each engines as en (en)}<option value={en}>{en}</option>{/each}
 				</select>
 			</div>
 			<div class="field">
-				<label for="mode">Mode</label>
+				<label for="mode">{t('jobs.form.mode')}</label>
 				<select id="mode" value={job.mode} onchange={(e) => setMode(e.currentTarget.value as JobInput['mode'])}>
-					<option value="copy">Copie (ne supprime rien)</option>
-					<option value="sync">Synchronisation miroir (supprime à la destination)</option>
+					<option value="copy">{t('jobs.form.mode.copy')}</option>
+					<option value="sync">{t('jobs.form.mode.sync')}</option>
 					{#if job.engine === 'rclone'}
-						<option value="move">Déplacement</option>
-						<option value="bisync">Bidirectionnelle (bisync)</option>
+						<option value="move">{t('jobs.form.mode.move')}</option>
+						<option value="bisync">{t('jobs.form.mode.bisync')}</option>
 					{/if}
 				</select>
 			</div>
@@ -286,13 +295,13 @@
 	{#each ['source', 'destination'] as const as side (side)}
 		<div class="card">
 			<h2>
-				{#if isBisync}{side === 'source' ? 'Chemin 1' : 'Chemin 2'}{:else}{side === 'source' ? 'Source' : 'Destination'}{/if}
+				{#if isBisync}{side === 'source' ? t('jobs.form.path1') : t('jobs.form.path2')}{:else}{side === 'source' ? t('jobs.form.source') : t('jobs.form.destination')}{/if}
 			</h2>
 			<div class="row">
-				{#each endpointTypes as t (t)}
+				{#each endpointTypes as ty (ty)}
 					<label class="check"
-						><input type="radio" name="{side}-type" checked={job[side].type === t} onchange={() => setType(side, t)} />
-						{TYPE_LABEL[t]}</label
+						><input type="radio" name="{side}-type" checked={job[side].type === ty} onchange={() => setType(side, ty)} />
+						{t(TYPE_LABEL[ty])}</label
 					>
 				{/each}
 			</div>
@@ -300,23 +309,23 @@
 				{@const ssh = job[side].ssh}
 				<div class="sshgrid">
 					<div class="field">
-						<label for="{side}-host">Hôte</label>
+						<label for="{side}-host">{t('jobs.form.ssh.host')}</label>
 						<input id="{side}-host" bind:value={ssh.host} placeholder="nas2.lan" />
 					</div>
 					<div class="field">
-						<label for="{side}-port">Port</label>
+						<label for="{side}-port">{t('jobs.form.ssh.port')}</label>
 						<input id="{side}-port" type="number" min="1" max="65535" bind:value={ssh.port} />
 					</div>
 					<div class="field">
-						<label for="{side}-user">Utilisateur</label>
+						<label for="{side}-user">{t('jobs.form.ssh.user')}</label>
 						<input id="{side}-user" bind:value={ssh.user} placeholder="backup" />
 					</div>
 					<div class="field">
-						<label for="{side}-id">Identité</label>
+						<label for="{side}-id">{t('jobs.form.ssh.identity')}</label>
 						<select id="{side}-id" value={identityValue(job[side])} onchange={(e) => setIdentity(side, e.currentTarget.value)}>
 							<option value="">—</option>
 							{#each identities as i (i.id)}<option value={String(i.id)}>{i.name} ({i.keyType})</option>{/each}
-							{#if isAdmin() && session.info?.sshMountedAvailable}<option value="mounted">~/.ssh monté</option>{/if}
+							{#if isAdmin() && session.info?.sshMountedAvailable}<option value="mounted">{t('jobs.form.ssh.mounted')}</option>{/if}
 						</select>
 					</div>
 				</div>
@@ -324,14 +333,14 @@
 					<div class="error small">{fe(side + '.ssh') ?? fe(side + '.ssh.identity')}</div>
 				{/if}
 				<div class="row small">
-					<button type="button" onclick={() => testSSH(side)} disabled={!ssh.host || !ssh.user}>Tester la connexion</button>
+					<button type="button" onclick={() => testSSH(side)} disabled={!ssh.host || !ssh.user}>{t('jobs.form.ssh.test')}</button>
 					{#if sshTest[side]}<span class="mono">{sshTest[side]}</span>{/if}
-					{#if isAdmin()}<a href="/ssh">Gérer les clés et hôtes connus</a>{/if}
+					{#if isAdmin()}<a href="/ssh">{t('jobs.form.ssh.manage')}</a>{/if}
 				</div>
 			{/if}
 			<div class="row endpoint">
 				{#if job[side].type === 'remote'}
-					<select bind:value={job[side].remote} aria-label="Remote">
+					<select bind:value={job[side].remote} aria-label={t('jobs.form.remote')}>
 						{#each remotes as r (r.name)}<option value={r.name}>{r.name} ({r.type})</option>{/each}
 					</select>
 					<span>:</span>
@@ -339,12 +348,12 @@
 				<input
 					class="grow mono"
 					bind:value={job[side].path}
-					placeholder={job[side].type === 'remote' ? 'bucket/dossier' : job[side].type === 'ssh' ? '/chemin/distant' : '/mnt/...'}
-					aria-label="Chemin"
+					placeholder={job[side].type === 'remote' ? t('jobs.form.placeholder.remote') : job[side].type === 'ssh' ? t('jobs.form.placeholder.ssh') : '/mnt/...'}
+					aria-label={t('jobs.form.path')}
 				/>
 				{#if job[side].type !== 'ssh'}
 					<button type="button" disabled={job[side].type === 'remote' && !job[side].remote} onclick={() => (picker = { side })}
-						>Parcourir…</button
+						>{t('jobs.form.browse')}</button
 					>
 				{/if}
 			</div>
@@ -353,135 +362,134 @@
 			{/if}
 			{#if side === 'source' && job.engine === 'rsync'}
 				<label class="check"
-					><input type="checkbox" bind:checked={job.source.contentsOnly} /> Copier le <em>contenu</em> du dossier (sinon le dossier
-					lui-même est créé dans la destination)</label
+					><input type="checkbox" bind:checked={job.source.contentsOnly} /> {t('jobs.form.contentsOnly.before')}
+					<em>{t('jobs.form.contentsOnly.em')}</em> {t('jobs.form.contentsOnly.after')}</label
 				>
 			{/if}
 		</div>
 	{/each}
 
 	<div class="card">
-		<h2>Options</h2>
+		<h2>{t('jobs.form.options')}</h2>
 		<div class="flags">
 			{#each flags as [key, label] (key)}
-				<label class="check"><input type="checkbox" checked={!!job.options[key]} onchange={(e) => (job.options[key] = e.currentTarget.checked)} /> {label}</label>
+				<label class="check"><input type="checkbox" checked={!!job.options[key]} onchange={(e) => (job.options[key] = e.currentTarget.checked)} /> {t(label)}</label>
 			{/each}
 		</div>
 		<div class="grid2" style="margin-top:0.8rem">
 			{#if job.engine === 'rsync'}
 				{#if job.mode === 'sync'}
 					<div class="field">
-						<label for="del">Moment des suppressions</label>
+						<label for="del">{t('jobs.form.deleteTiming')}</label>
 						<select id="del" value={job.options.delete ?? 'after'} onchange={(e) => (job.options.delete = e.currentTarget.value)}>
-							<option value="after">Après le transfert</option>
-							<option value="during">Pendant</option>
-							<option value="delay">Différé</option>
+							<option value="after">{t('jobs.form.deleteTiming.after')}</option>
+							<option value="during">{t('jobs.form.deleteTiming.during')}</option>
+							<option value="delay">{t('jobs.form.deleteTiming.delay')}</option>
 						</select>
 					</div>
 				{/if}
 				<div class="field">
-					<label for="bw">Limite de bande passante (Kio/s)</label>
+					<label for="bw">{t('jobs.form.bwLimit')}</label>
 					<input id="bw" type="number" min="0" value={numOpt('bwLimitKiB')} oninput={(e) => setNum('bwLimitKiB', e.currentTarget.value)} />
 				</div>
 				<div class="field">
-					<label for="to">Timeout E/S (s)</label>
+					<label for="to">{t('jobs.form.ioTimeout')}</label>
 					<input id="to" type="number" min="0" value={numOpt('timeoutSec')} oninput={(e) => setNum('timeoutSec', e.currentTarget.value)} />
 				</div>
 			{:else}
 				<div class="field">
-					<label for="tr">Transferts parallèles</label>
+					<label for="tr">{t('jobs.form.transfers')}</label>
 					<input id="tr" type="number" min="1" max="64" value={numOpt('transfers')} oninput={(e) => setNum('transfers', e.currentTarget.value)} />
 				</div>
 				<div class="field">
-					<label for="ck">Vérifications parallèles</label>
+					<label for="ck">{t('jobs.form.checkers')}</label>
 					<input id="ck" type="number" min="1" max="128" value={numOpt('checkers')} oninput={(e) => setNum('checkers', e.currentTarget.value)} />
 				</div>
 				{#if !isBisync}
 					<div class="field">
-						<label for="ma">Âge max (ex. 7d)</label>
+						<label for="ma">{t('jobs.form.maxAge')}</label>
 						<input id="ma" value={job.options.maxAge ?? ''} oninput={(e) => (job.options.maxAge = e.currentTarget.value)} />
 					</div>
 				{/if}
 			{/if}
 			{#if job.mode !== 'copy' && !isBisync}
 				<div class="field">
-					<label for="md">Suppressions max (garde-fou)</label>
+					<label for="md">{t('jobs.form.maxDelete')}</label>
 					<input id="md" type="number" min="0" value={numOpt('maxDelete')} oninput={(e) => setNum('maxDelete', e.currentTarget.value)} />
 				</div>
 			{/if}
 		</div>
 		<div class="grid2">
 			<div class="field">
-				<label for="ex">Exclusions (un motif par ligne)</label>
+				<label for="ex">{t('jobs.form.excludes')}</label>
 				<textarea id="ex" rows="4" class="mono" bind:value={excludes} placeholder="*.tmp&#10;.DS_Store"></textarea>
 			</div>
 			<div class="field">
-				<label for="in">Inclusions (prioritaires)</label>
+				<label for="in">{t('jobs.form.includes')}</label>
 				<textarea id="in" rows="4" class="mono" bind:value={includes}></textarea>
 			</div>
 		</div>
 		{#each Object.entries(fields).filter(([k]) => k.startsWith('options')) as [k, v] (k)}
-			<div class="error small">{k} : {v}</div>
+			<div class="error small">{t('jobs.form.optionError', { key: k, msg: v })}</div>
 		{/each}
 	</div>
 
 	{#if isBisync}
 		<div class="card">
-			<h2>Synchronisation bidirectionnelle</h2>
+			<h2>{t('jobs.form.bisync.title')}</h2>
 			<div class="alert warn small">
-				Les changements (ajouts, modifications, suppressions) de chaque côté sont propagés à l'autre. Le
-				<strong>premier run doit être un resync</strong> (bouton « Resync » sur la page du job), de même après une
-				modification des filtres ou une erreur critique. Un resync fusionne les deux côtés et ne supprime jamais rien.
+				{t('jobs.form.bisync.intro1')}
+				<strong>{t('jobs.form.bisync.intro2')}</strong> {t('jobs.form.bisync.intro3')}
 			</div>
 			<div class="grid2">
 				<div class="field">
-					<label for="bcr">Conflit (fichier modifié des deux côtés)</label>
+					<label for="bcr">{t('jobs.form.bisync.conflict')}</label>
 					<select id="bcr" value={bval('conflictResolve')} onchange={(e) => setB('conflictResolve', e.currentTarget.value)}>
-						<option value="">Garder les deux versions (défaut)</option>
-						<option value="newer">Le plus récent gagne</option>
-						<option value="older">Le plus ancien gagne</option>
-						<option value="larger">Le plus gros gagne</option>
-						<option value="smaller">Le plus petit gagne</option>
-						<option value="path1">Chemin 1 gagne</option>
-						<option value="path2">Chemin 2 gagne</option>
+						<option value="">{t('jobs.form.bisync.keepBoth')}</option>
+						<option value="newer">{t('jobs.form.bisync.win.newer')}</option>
+						<option value="older">{t('jobs.form.bisync.win.older')}</option>
+						<option value="larger">{t('jobs.form.bisync.win.larger')}</option>
+						<option value="smaller">{t('jobs.form.bisync.win.smaller')}</option>
+						<option value="path1">{t('jobs.form.bisync.win.path1')}</option>
+						<option value="path2">{t('jobs.form.bisync.win.path2')}</option>
 					</select>
 				</div>
 				<div class="field">
-					<label for="bcl">Version perdante</label>
+					<label for="bcl">{t('jobs.form.bisync.loser')}</label>
 					<select id="bcl" value={bval('conflictLoser')} onchange={(e) => setB('conflictLoser', e.currentTarget.value)}>
-						<option value="">Renommer avec un numéro (défaut)</option>
-						<option value="pathname">Renommer avec le nom du chemin</option>
-						<option value="delete">Supprimer</option>
+						<option value="">{t('jobs.form.bisync.loser.num')}</option>
+						<option value="pathname">{t('jobs.form.bisync.loser.pathname')}</option>
+						<option value="delete">{t('common.delete')}</option>
 					</select>
 				</div>
 				<div class="field">
-					<label for="bcs">Suffixe des conflits</label>
+					<label for="bcs">{t('jobs.form.bisync.suffix')}</label>
 					<input id="bcs" class="mono" placeholder="conflict" value={bval('conflictSuffix')}
 						oninput={(e) => setB('conflictSuffix', e.currentTarget.value.trim())} />
 				</div>
 				<div class="field">
-					<label for="brm">Lors d'un resync, en cas de différence</label>
+					<label for="brm">{t('jobs.form.bisync.resyncMode')}</label>
 					<select id="brm" value={bval('resyncMode')} onchange={(e) => setB('resyncMode', e.currentTarget.value)}>
-						<option value="">Chemin 1 gagne (défaut)</option>
-						<option value="path2">Chemin 2 gagne</option>
-						<option value="newer">Le plus récent gagne</option>
-						<option value="older">Le plus ancien gagne</option>
-						<option value="larger">Le plus gros gagne</option>
-						<option value="smaller">Le plus petit gagne</option>
+						<option value="">{t('jobs.form.bisync.win.path1Default')}</option>
+						<option value="path2">{t('jobs.form.bisync.win.path2')}</option>
+						<option value="newer">{t('jobs.form.bisync.win.newer')}</option>
+						<option value="older">{t('jobs.form.bisync.win.older')}</option>
+						<option value="larger">{t('jobs.form.bisync.win.larger')}</option>
+						<option value="smaller">{t('jobs.form.bisync.win.smaller')}</option>
 					</select>
 				</div>
 				<div class="field">
-					<label for="bmd">Suppressions max (% des fichiers, défaut 50)</label>
+					<label for="bmd">{t('jobs.form.bisync.maxDeletePercent')}</label>
 					<input id="bmd" type="number" min="0" max="100" value={bval('maxDeletePercent')}
 						oninput={(e) => setB('maxDeletePercent', e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} />
 				</div>
 				<fieldset class="field plain">
-					<legend>Comparer par (défaut : taille et date)</legend>
+					<legend>{t('jobs.form.bisync.compare')}</legend>
 					<div class="row">
 						{#each COMPARE as c (c)}
 							<label class="check"
 								><input type="checkbox" checked={compareHas(c)} onchange={(e) => toggleCompare(c, e.currentTarget.checked)} />
-								{COMPARE_LABEL[c]}</label
+								{t(COMPARE_LABEL[c])}</label
 							>
 						{/each}
 					</div>
@@ -490,42 +498,42 @@
 			<div class="flags">
 				<label class="check"
 					><input type="checkbox" checked={!bval('noRecover')} onchange={(e) => setB('noRecover', !e.currentTarget.checked)} />
-					Reprendre proprement après une interruption (sans resync)</label
+					{t('jobs.form.bisync.recover')}</label
 				>
 				<label class="check"
 					><input type="checkbox" checked={!!bval('resilient')} onchange={(e) => setB('resilient', e.currentTarget.checked)} />
-					Tolérer les erreurs non critiques (pas de resync imposé au run suivant)</label
+					{t('jobs.form.bisync.resilient')}</label
 				>
 				<label class="check"
 					><input type="checkbox" checked={!!bval('removeEmptyDirs')} onchange={(e) => setB('removeEmptyDirs', e.currentTarget.checked)} />
-					Supprimer les dossiers vides</label
+					{t('jobs.form.bisync.removeEmptyDirs')}</label
 				>
 				<label class="check"
 					><input type="checkbox" checked={!!bval('checkAccess')} onchange={(e) => setB('checkAccess', e.currentTarget.checked)} />
-					Exiger les fichiers témoins RCLONE_TEST des deux côtés</label
+					{t('jobs.form.bisync.checkAccess')}</label
 				>
 			</div>
 		</div>
 	{/if}
 
 	<div class="card">
-		<h2>Planification</h2>
-		<label class="check"><input type="checkbox" bind:checked={cronOn} /> Exécuter automatiquement</label>
+		<h2>{t('jobs.form.schedule')}</h2>
+		<label class="check"><input type="checkbox" bind:checked={cronOn} /> {t('jobs.form.schedule.auto')}</label>
 		{#if cronOn}
 			<div class="grid2">
 				<div class="field">
-					<label for="cron">Expression cron (minute heure jour mois jour-semaine)</label>
+					<label for="cron">{t('jobs.form.schedule.cron')}</label>
 					<input id="cron" class="mono" bind:value={cron} />
 					{#if cronError || fe('schedule.cron')}<div class="error">{cronError || fe('schedule.cron')}</div>{/if}
-					<label class="check"><input type="checkbox" bind:checked={cronEnabled} /> Planification active</label>
+					<label class="check"><input type="checkbox" bind:checked={cronEnabled} /> {t('jobs.form.schedule.enabled')}</label>
 					<label class="check">
 						<input type="checkbox" bind:checked={job.catchUp} />
-						Rattraper au démarrage une exécution manquée pendant un arrêt du serveur
+						{t('jobs.form.schedule.catchUp')}
 					</label>
 				</div>
 				<div class="small muted">
 					{#if nextRuns.length}
-						Prochaines exécutions :
+						{t('jobs.form.schedule.next')}
 						<ul>
 							{#each nextRuns as n (n)}<li>{dateTime(n)}</li>{/each}
 						</ul>
@@ -533,23 +541,22 @@
 				</div>
 			</div>
 		{/if}
-		<label class="check"><input type="checkbox" bind:checked={job.retryInterrupted} /> Relancer automatiquement si interrompu par un redémarrage</label>
+		<label class="check"><input type="checkbox" bind:checked={job.retryInterrupted} /> {t('jobs.form.retryInterrupted')}</label>
 	</div>
 
 	<div class="card">
-		<h2>Relances automatiques</h2>
+		<h2>{t('jobs.form.retries')}</h2>
 		<p class="small muted">
-			Après un échec transitoire (réseau, protocole, erreur rclone non fatale), le job est relancé après le délai
-			choisi. Les échecs de validation, les annulations et les dry-runs ne sont jamais relancés.
+			{t('jobs.form.retries.help')}
 		</p>
 		<div class="grid2">
 			<div class="field">
-				<label for="rmax">Nombre maximum de relances (0 = désactivé)</label>
+				<label for="rmax">{t('jobs.form.retries.max')}</label>
 				<input id="rmax" type="number" min="0" max="10" bind:value={job.retryMax} />
 				{#if fe('retryMax')}<div class="error">{fe('retryMax')}</div>{/if}
 			</div>
 			<div class="field">
-				<label for="rdelay">Délai avant chaque relance (secondes)</label>
+				<label for="rdelay">{t('jobs.form.retries.delay')}</label>
 				<input id="rdelay" type="number" min="10" max="86400" bind:value={job.retryDelaySec} disabled={!job.retryMax} />
 				{#if fe('retryDelaySec')}<div class="error">{fe('retryDelaySec')}</div>{/if}
 			</div>
@@ -558,7 +565,7 @@
 
 	{#if preview}
 		<div class="card">
-			<h2>Aperçu</h2>
+			<h2>{t('jobs.form.preview')}</h2>
 			{#if preview.argv}
 				<pre class="mono">{preview.argv.map((a) => (/[\s"'$]/.test(a) ? JSON.stringify(a) : a)).join(' ')}</pre>
 			{:else}
@@ -569,7 +576,7 @@
 	{/if}
 
 	<div class="row">
-		<button type="button" onclick={doPreview}>Vérifier et prévisualiser</button>
+		<button type="button" onclick={doPreview}>{t('jobs.form.previewButton')}</button>
 		<span class="spacer"></span>
 		<button type="submit" class="primary" disabled={busy}>{submitLabel}</button>
 	</div>

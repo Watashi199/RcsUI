@@ -4,6 +4,7 @@
 	import { get, put, errorMessage } from '#lib/api.ts';
 	import type { User } from '#lib/types.ts';
 	import RemoteForm from '#lib/components/RemoteForm.svelte';
+	import { t } from '#lib/i18n/i18n.svelte.ts';
 
 	const name = $derived(page.params.name ?? '');
 	let operators = $state<User[]>([]);
@@ -34,31 +35,31 @@
 				.filter(([, v]) => v)
 				.map(([k]) => Number(k));
 			await put(`/remotes/${encodeURIComponent(name)}/grants`, { userIds: ids });
-			msg = 'Accès enregistrés.';
+			msg = t('remotes.detail.grantsSaved');
 		} catch (e) {
 			error = errorMessage(e);
 		}
 	}
 </script>
 
-<svelte:head><title>{name} · Remotes · RcsUI</title></svelte:head>
+<svelte:head><title>{t('remotes.detail.pageTitle', { name })}</title></svelte:head>
 
-<h1>Remote « {name} »</h1>
+<h1>{t('remotes.detail.title', { name })}</h1>
 {#key name}
 	<RemoteForm {name} ondone={() => goto('/remotes')} />
 {/key}
 
-<h2>Opérateurs autorisés</h2>
+<h2>{t('remotes.detail.operators')}</h2>
 {#if error}<div class="alert err">{error}</div>{/if}
 {#if msg}<div class="alert ok">{msg}</div>{/if}
 <div class="card" style="max-width:900px">
 	{#if operators.length === 0}
-		<span class="muted">Aucun utilisateur de rôle « operator ».</span>
+		<span class="muted">{t('remotes.detail.noOperators')}</span>
 	{:else}
 		{#each operators as u (u.id)}
 			<label class="check"><input type="checkbox" bind:checked={granted[u.id]} /> {u.username}</label>
 		{/each}
-		<button style="margin-top:0.6rem" onclick={saveGrants}>Enregistrer les accès</button>
+		<button style="margin-top:0.6rem" onclick={saveGrants}>{t('remotes.detail.saveGrants')}</button>
 	{/if}
-	<div class="muted small">Les administrateurs ont accès à tous les remotes ; les lecteurs à aucun.</div>
+	<div class="muted small">{t('remotes.detail.grantsHint')}</div>
 </div>

@@ -6,6 +6,7 @@
 	import { relative, dateTime } from '#lib/format.ts';
 	import type { Endpoint, Job } from '#lib/types.ts';
 	import StateBadge from '#lib/components/StateBadge.svelte';
+	import { t } from '#lib/i18n/i18n.svelte.ts';
 
 	let jobs = $state<Job[]>([]);
 	let error = $state('');
@@ -39,29 +40,29 @@
 	}
 </script>
 
-<svelte:head><title>Jobs · RcsUI</title></svelte:head>
+<svelte:head><title>{t('jobs.list.title')} · RcsUI</title></svelte:head>
 
 <div class="row">
-	<h1>Jobs</h1>
+	<h1>{t('jobs.list.title')}</h1>
 	<span class="spacer"></span>
-	{#if canCreateJobs()}<a class="btn primary" href="/jobs/new">Nouveau job</a>{/if}
+	{#if canCreateJobs()}<a class="btn primary" href="/jobs/new">{t('jobs.list.new')}</a>{/if}
 </div>
 {#if error}<div class="alert err">{error}</div>{/if}
 
 {#if loaded && jobs.length === 0}
 	<div class="card empty">
-		Aucun job.
-		{#if canCreateJobs()}<a href="/jobs/new">Créer le premier job</a>{/if}
+		{t('jobs.list.empty')}
+		{#if canCreateJobs()}<a href="/jobs/new">{t('jobs.list.createFirst')}</a>{/if}
 	</div>
 {:else if jobs.length}
 	<div class="table-wrap">
 		<table>
 			<thead>
 				<tr>
-					<th>Nom</th>
-					<th class="hide-sm">Source → destination</th>
-					<th>Dernière exécution</th>
-					<th class="hide-sm">Planification</th>
+					<th>{t('jobs.list.col.name')}</th>
+					<th class="hide-sm">{t('jobs.list.col.path')}</th>
+					<th>{t('jobs.list.col.lastRun')}</th>
+					<th class="hide-sm">{t('jobs.list.col.schedule')}</th>
 					<th></th>
 				</tr>
 			</thead>
@@ -77,18 +78,18 @@
 							{#if j.lastRun}
 								<a href="/runs/{j.lastRun.id}"><StateBadge state={j.active ? 'running' : j.lastRun.state} dryRun={j.lastRun.dryRun} /></a>
 								<div class="muted small" title={dateTime(j.lastRun.queuedAt)}>{relative(j.lastRun.queuedAt)}</div>
-							{:else}<span class="muted small">jamais</span>{/if}
+							{:else}<span class="muted small">{t('jobs.list.never')}</span>{/if}
 						</td>
 						<td class="hide-sm small">
 							{#if j.scheduleCron}
 								<span class="mono">{j.scheduleCron}</span>
-								{#if !j.scheduleEnabled}<span class="muted">(désactivée)</span>{:else if j.nextRunAt}<div class="muted">{relative(j.nextRunAt)}</div>{/if}
-							{:else}<span class="muted">manuel</span>{/if}
+								{#if !j.scheduleEnabled}<span class="muted">{t('jobs.scheduleDisabled')}</span>{:else if j.nextRunAt}<div class="muted">{relative(j.nextRunAt)}</div>{/if}
+							{:else}<span class="muted">{t('jobs.list.manual')}</span>{/if}
 						</td>
 						<td class="actions">
 							{#if canRun(j)}
-								<button onclick={() => run(j, false)} disabled={j.active}>Lancer</button>
-								<button onclick={() => run(j, true)} disabled={j.active} title="Simulation sans modification">Dry-run</button>
+								<button onclick={() => run(j, false)} disabled={j.active}>{t('jobs.action.run')}</button>
+								<button onclick={() => run(j, true)} disabled={j.active} title={t('jobs.list.dryRunTitle')}>{t('jobs.action.dryRun')}</button>
 							{/if}
 						</td>
 					</tr>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { bytes, speed, duration, percent } from '#lib/format.ts';
 	import type { Progress } from '#lib/types.ts';
+	import { t, tn } from '#lib/i18n/i18n.svelte.ts';
 
 	let { p, compact = false }: { p: Progress | undefined; compact?: boolean } = $props();
 	const pct = $derived(p ? percent(p.bytesDone, p.bytesTotal) : null);
@@ -14,12 +15,12 @@
 		<div class="meta small">
 			<span>{pct === null ? '…' : pct.toFixed(1) + ' %'}</span>
 			<span>{bytes(p.bytesDone)}{p.bytesTotal ? ' / ' + bytes(p.bytesTotal) : ''}</span>
-			<span>{p.filesDone}{p.filesTotal ? '/' + p.filesTotal : ''} fichiers{p.totalsExact ? '' : ' (estimation)'}</span>
+			<span>{tn(p.filesTotal || p.filesDone, 'runs.progress.files.one', 'runs.progress.files.other', { n: p.filesDone + (p.filesTotal ? '/' + p.filesTotal : '') })}{p.totalsExact ? '' : t('runs.progress.estimate')}</span>
 			{#if !compact}
 				<span>{speed(p.speedBps)}</span>
-				<span>ETA {duration(p.etaSec)}</span>
-				{#if p.deletes}<span>{p.deletes} suppr.</span>{/if}
-				{#if p.errors}<span class="err">{p.errors} erreur(s)</span>{/if}
+				<span>{t('runs.progress.eta', { eta: duration(p.etaSec) })}</span>
+				{#if p.deletes}<span>{t('runs.progress.deletes', { n: p.deletes })}</span>{/if}
+				{#if p.errors}<span class="err">{tn(p.errors, 'runs.progress.errors.one', 'runs.progress.errors.other')}</span>{/if}
 			{/if}
 		</div>
 		{#if !compact && p.current?.length}

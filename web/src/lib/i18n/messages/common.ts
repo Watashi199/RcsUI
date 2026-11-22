@@ -1,0 +1,108 @@
+// Messages partagés : navigation, états de run, unités, actions génériques.
+// Clés préfixées par « common. ». `en` doit contenir exactement les clés de `fr`.
+
+export const fr = {
+	// Navigation et coquille
+	'common.nav.dashboard': 'Tableau de bord',
+	'common.nav.jobs': 'Jobs',
+	'common.nav.runs': 'Exécutions',
+	'common.nav.remotes': 'Remotes',
+	'common.nav.ssh': 'SSH',
+	'common.nav.users': 'Utilisateurs',
+	'common.nav.settings': 'Réglages',
+	'common.nav.password': 'Mot de passe',
+	'common.nav.logout': 'Déconnexion',
+	'common.live.on': 'Temps réel connecté',
+	'common.live.off': 'Temps réel déconnecté',
+	'common.loading': 'Chargement…',
+	'common.serverUnreachable': 'Serveur injoignable : {error}',
+	'common.language': 'Langue',
+
+	// Actions génériques
+	'common.save': 'Enregistrer',
+	'common.cancel': 'Annuler',
+	'common.delete': 'Supprimer',
+	'common.edit': 'Modifier',
+	'common.close': 'Fermer',
+	'common.create': 'Créer',
+	'common.back': 'Retour',
+	'common.yes': 'Oui',
+	'common.no': 'Non',
+	'common.none': 'Aucun',
+	'common.loadMore': 'Charger plus',
+
+	// États d'un run
+	'common.state.queued': 'En file',
+	'common.state.starting': 'Démarrage',
+	'common.state.running': 'En cours',
+	'common.state.cancelling': 'Annulation…',
+	'common.state.succeeded': 'Réussi',
+	'common.state.partial': 'Partiel',
+	'common.state.failed': 'Échec',
+	'common.state.cancelled': 'Annulé',
+	'common.state.interrupted': 'Interrompu',
+	'common.state.skipped': 'Ignoré',
+	'common.dryRun': 'dry-run',
+
+	// Unités et durées
+	'common.unit.b': 'o',
+	'common.unit.kib': 'Kio',
+	'common.unit.mib': 'Mio',
+	'common.unit.gib': 'Gio',
+	'common.unit.tib': 'Tio',
+	'common.unit.pib': 'Pio',
+	'common.duration.hm': '{h} h {m} min',
+	'common.duration.ms': '{m} min {s} s',
+	'common.duration.s': '{s} s'
+} satisfies Record<string, string>;
+
+export const en: Record<keyof typeof fr, string> = {
+	'common.nav.dashboard': 'Dashboard',
+	'common.nav.jobs': 'Jobs',
+	'common.nav.runs': 'Runs',
+	'common.nav.remotes': 'Remotes',
+	'common.nav.ssh': 'SSH',
+	'common.nav.users': 'Users',
+	'common.nav.settings': 'Settings',
+	'common.nav.password': 'Password',
+	'common.nav.logout': 'Log out',
+	'common.live.on': 'Live updates connected',
+	'common.live.off': 'Live updates disconnected',
+	'common.loading': 'Loading…',
+	'common.serverUnreachable': 'Server unreachable: {error}',
+	'common.language': 'Language',
+
+	'common.save': 'Save',
+	'common.cancel': 'Cancel',
+	'common.delete': 'Delete',
+	'common.edit': 'Edit',
+	'common.close': 'Close',
+	'common.create': 'Create',
+	'common.back': 'Back',
+	'common.yes': 'Yes',
+	'common.no': 'No',
+	'common.none': 'None',
+	'common.loadMore': 'Load more',
+
+	'common.state.queued': 'Queued',
+	'common.state.starting': 'Starting',
+	'common.state.running': 'Running',
+	'common.state.cancelling': 'Cancelling…',
+	'common.state.succeeded': 'Succeeded',
+	'common.state.partial': 'Partial',
+	'common.state.failed': 'Failed',
+	'common.state.cancelled': 'Cancelled',
+	'common.state.interrupted': 'Interrupted',
+	'common.state.skipped': 'Skipped',
+	'common.dryRun': 'dry run',
+
+	'common.unit.b': 'B',
+	'common.unit.kib': 'KiB',
+	'common.unit.mib': 'MiB',
+	'common.unit.gib': 'GiB',
+	'common.unit.tib': 'TiB',
+	'common.unit.pib': 'PiB',
+	'common.duration.hm': '{h} h {m} min',
+	'common.duration.ms': '{m} min {s} s',
+	'common.duration.s': '{s} s'
+};

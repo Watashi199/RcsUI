@@ -1,5 +1,7 @@
 // Client HTTP de l'API : ajoute le token CSRF, décode les erreurs typées.
 
+import { t } from './i18n/i18n.svelte.ts';
+
 export class ApiError extends Error {
 	constructor(
 		public status: number,
@@ -60,7 +62,7 @@ export const del = <T>(p: string) => api<T>('DELETE', p);
 export function errorMessage(e: unknown): string {
 	if (e instanceof ApiError) {
 		const fields = Object.entries(e.fields);
-		if (fields.length) return fields.map(([k, v]) => `${k} : ${v}`).join(' · ');
+		if (fields.length) return fields.map(([k, v]) => t('lib.api.fieldError', { field: k, message: v })).join(' · ');
 		return e.message;
 	}
 	return e instanceof Error ? e.message : String(e);

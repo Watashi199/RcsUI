@@ -6,6 +6,7 @@
 	import type { Job, Run } from '#lib/types.ts';
 	import StateBadge from '#lib/components/StateBadge.svelte';
 	import ProgressBar from '#lib/components/ProgressBar.svelte';
+	import { t } from '#lib/i18n/i18n.svelte.ts';
 
 	let jobs = $state<Job[]>([]);
 	let recent = $state<Run[]>([]);
@@ -37,14 +38,14 @@
 	);
 </script>
 
-<svelte:head><title>Tableau de bord · RcsUI</title></svelte:head>
+<svelte:head><title>{t('runs.dashboard.title')} · RcsUI</title></svelte:head>
 
-<h1>Tableau de bord</h1>
+<h1>{t('runs.dashboard.title')}</h1>
 {#if error}<div class="alert err">{error}</div>{/if}
 
-<h2>En cours</h2>
+<h2>{t('runs.dashboard.running')}</h2>
 {#if active.length === 0}
-	<div class="card empty">Aucune exécution en cours.</div>
+	<div class="card empty">{t('runs.dashboard.noRunning')}</div>
 {:else}
 	<div class="list">
 		{#each active as r (r.runId)}
@@ -61,9 +62,9 @@
 
 <div class="grid2">
 	<section>
-		<h2>Échecs récents</h2>
+		<h2>{t('runs.dashboard.recentFailures')}</h2>
 		{#if failures.length === 0}
-			<div class="card empty">Aucun échec récent.</div>
+			<div class="card empty">{t('runs.dashboard.noFailures')}</div>
 		{:else}
 			<div class="table-wrap">
 				<table>
@@ -81,9 +82,9 @@
 		{/if}
 	</section>
 	<section>
-		<h2>Prochaines exécutions planifiées</h2>
+		<h2>{t('runs.dashboard.upcoming')}</h2>
 		{#if upcoming.length === 0}
-			<div class="card empty">Aucun job planifié.</div>
+			<div class="card empty">{t('runs.dashboard.noUpcoming')}</div>
 		{:else}
 			<div class="table-wrap">
 				<table>
@@ -104,7 +105,7 @@
 
 {#if session.info && session.info.allowedRoots.length === 0}
 	<div class="alert warn" style="margin-top:1.5rem">
-		Aucune racine locale autorisée (RCSUI_ALLOWED_ROOTS) : seuls les remotes rclone sont utilisables.
+		{t('runs.dashboard.noRoots', { env: 'RCSUI_ALLOWED_ROOTS' })}
 	</div>
 {/if}
 

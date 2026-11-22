@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { get, post, put, errorMessage } from '#lib/api.ts';
 	import type { ConfigResult, Provider, ProviderOption } from '#lib/types.ts';
+	import { t } from '#lib/i18n/i18n.svelte.ts';
 
 	let { name: existing = '', ondone }: { name?: string; ondone: (name: string) => void } = $props();
 
@@ -116,34 +117,34 @@
 
 {#if question}
 	<div class="card">
-		<h2>Étape de configuration</h2>
+		<h2>{t('remotes.form.step')}</h2>
 		<p class="help">{question.option['Help'] ?? question.option['Name']}</p>
 		{#if String(question.option['Name'] ?? '').includes('token')}
 			<div class="alert warn small">
-				Ce backend utilise OAuth. Sur un poste disposant d'un navigateur, exécutez
-				<code>rclone authorize "{type}"</code> puis collez ici le jeton JSON obtenu.
+				{t('remotes.form.oauthBefore')}
+				<code>rclone authorize "{type}"</code> {t('remotes.form.oauthAfter')}
 			</div>
 		{/if}
 		<div class="field">
 			<textarea rows="3" class="mono" bind:value={answer}></textarea>
 		</div>
-		<button class="primary" onclick={answerQuestion} disabled={busy}>Continuer</button>
+		<button class="primary" onclick={answerQuestion} disabled={busy}>{t('remotes.form.continue')}</button>
 	</div>
 {:else}
 	<form onsubmit={submit} class="form">
 		<div class="card">
 			<div class="grid2">
 				<div class="field">
-					<label for="rname">Nom du remote</label>
+					<label for="rname">{t('remotes.form.name')}</label>
 					<input id="rname" bind:value={name} disabled={!!existing} pattern="[A-Za-z0-9_][A-Za-z0-9_. \-]*" maxlength="64" required />
-					<div class="hint">Lettres, chiffres, « _ », « - », « . » et espaces.</div>
+					<div class="hint">{t('remotes.form.nameHint')}</div>
 				</div>
 				<div class="field">
-					<label for="rtype">Type</label>
+					<label for="rtype">{t('remotes.form.type')}</label>
 					{#if existing}
 						<input id="rtype" value={type} disabled />
 					{:else}
-						<input placeholder="Filtrer (s3, drive, sftp…)" bind:value={filter} aria-label="Filtrer les types" />
+						<input placeholder={t('remotes.form.filterPlaceholder')} bind:value={filter} aria-label={t('remotes.form.filterLabel')} />
 						<select id="rtype" bind:value={type} size="6" required>
 							{#each filteredProviders as p (p.type)}<option value={p.type}>{p.type} — {p.description}</option>{/each}
 						</select>
@@ -155,9 +156,9 @@
 		{#if provider}
 			<div class="card">
 				<div class="row">
-					<h2 style="margin:0">Paramètres {provider.type}</h2>
+					<h2 style="margin:0">{t('remotes.form.params', { type: provider.type })}</h2>
 					<span class="spacer"></span>
-					<label class="check"><input type="checkbox" bind:checked={showAdvanced} /> Options avancées</label>
+					<label class="check"><input type="checkbox" bind:checked={showAdvanced} /> {t('remotes.form.advanced')}</label>
 				</div>
 				{#each shown as o (o.name)}
 					{@const ex = examplesFor(o)}
@@ -169,11 +170,11 @@
 								type="password"
 								autocomplete="new-password"
 								bind:value={values[o.name]}
-								placeholder={secretSet[o.name] ? '•••••• (inchangé)' : ''}
+								placeholder={secretSet[o.name] ? t('remotes.form.secretUnchanged') : ''}
 							/>
 						{:else if o.type === 'bool'}
 							<select id="o-{o.name}" bind:value={values[o.name]}>
-								<option value="">défaut ({String(o.default ?? 'false')})</option>
+								<option value="">{t('remotes.form.boolDefault', { value: String(o.default ?? 'false') })}</option>
 								<option value="true">true</option>
 								<option value="false">false</option>
 							</select>
@@ -203,7 +204,7 @@
 
 		<div class="row">
 			<span class="spacer"></span>
-			<button class="primary" type="submit" disabled={busy || !type}>{existing ? 'Enregistrer' : 'Créer le remote'}</button>
+			<button class="primary" type="submit" disabled={busy || !type}>{existing ? t('common.save') : t('remotes.form.create')}</button>
 		</div>
 	</form>
 {/if}
