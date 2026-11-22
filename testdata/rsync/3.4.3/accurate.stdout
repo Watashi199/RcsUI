@@ -1,0 +1,110 @@
+created directory /tmp/tmp.jHCENk/dst2
+::I cd+++++++++ 4096 ./
+::I >f+++++++++ 30000000 big.bin
+          32768   0%    0.00kB/s    0:00:00         30000000  50%  697.05MB/s    0:00:00 (xfr#1, to-chk=46/48)
+::I cL+++++++++ 8 link
+::I >f+++++++++ 1 new\#012line
+       30000001  50%  697.05MB/s    0:00:00 (xfr#2, to-chk=44/48)
+::I >f+++++++++ 1 unicodé ☃.txt
+       30000002  50%  697.05MB/s    0:00:00 (xfr#3, to-chk=43/48)
+::I >f+++++++++ 0 zero.txt
+       30000002  50%  697.05MB/s    0:00:00 (xfr#4, to-chk=42/48)
+::I cd+++++++++ 4096 empty/
+::I cd+++++++++ 4096 sub dir/
+::I >f+++++++++ 0 sub dir/file 0.bin
+       30000002  50%  697.05MB/s    0:00:00 (xfr#5, to-chk=39/48)
+::I >f+++++++++ 37000 sub dir/file 1.bin
+       30037002  51%  697.91MB/s    0:00:00 (xfr#6, to-chk=38/48)
+::I >f+++++++++ 370000 sub dir/file 10.bin
+       30407002  51%  689.69MB/s    0:00:00 (xfr#7, to-chk=37/48)
+::I >f+++++++++ 407000 sub dir/file 11.bin
+       30814002  52%  698.94MB/s    0:00:00 (xfr#8, to-chk=36/48)
+::I >f+++++++++ 444000 sub dir/file 12.bin
+       31258002  53%  692.53MB/s    0:00:00 (xfr#9, to-chk=35/48)
+::I >f+++++++++ 481000 sub dir/file 13.bin
+       31739002  53%  703.20MB/s    0:00:00 (xfr#10, to-chk=34/48)
+::I >f+++++++++ 518000 sub dir/file 14.bin
+       32257002  54%  698.44MB/s    0:00:00 (xfr#11, to-chk=33/48)
+::I >f+++++++++ 555000 sub dir/file 15.bin
+       32812002  55%  694.68MB/s    0:00:00 (xfr#12, to-chk=32/48)
+::I >f+++++++++ 592000 sub dir/file 16.bin
+       33404002  56%  691.85MB/s    0:00:00 (xfr#13, to-chk=31/48)
+::I >f+++++++++ 629000 sub dir/file 17.bin
+       34033002  57%  704.89MB/s    0:00:00 (xfr#14, to-chk=30/48)
+::I >f+++++++++ 666000 sub dir/file 18.bin
+       34699002  58%  703.41MB/s    0:00:00 (xfr#15, to-chk=29/48)
+::I >f+++++++++ 703000 sub dir/file 19.bin
+       35402002  60%  702.72MB/s    0:00:00 (xfr#16, to-chk=28/48)
+::I >f+++++++++ 74000 sub dir/file 2.bin
+       35476002  60%  704.19MB/s    0:00:00 (xfr#17, to-chk=27/48)
+::I >f+++++++++ 740000 sub dir/file 20.bin
+       36216002  61%  704.22MB/s    0:00:00 (xfr#18, to-chk=26/48)
+::I >f+++++++++ 777000 sub dir/file 21.bin
+       36993002  62%  704.96MB/s    0:00:00 (xfr#19, to-chk=25/48)
+::I >f+++++++++ 814000 sub dir/file 22.bin
+       37807002  64%  706.36MB/s    0:00:00 (xfr#20, to-chk=24/48)
+::I >f+++++++++ 851000 sub dir/file 23.bin
+       38658002  65%  708.38MB/s    0:00:00 (xfr#21, to-chk=23/48)
+::I >f+++++++++ 888000 sub dir/file 24.bin
+       39546002  67%  711.00MB/s    0:00:00 (xfr#22, to-chk=22/48)
+::I >f+++++++++ 925000 sub dir/file 25.bin
+       40471002  68%  714.16MB/s    0:00:00 (xfr#23, to-chk=21/48)
+::I >f+++++++++ 962000 sub dir/file 26.bin
+       41433002  70%  705.04MB/s    0:00:00 (xfr#24, to-chk=20/48)
+::I >f+++++++++ 999000 sub dir/file 27.bin
+       42432002  72%  709.39MB/s    0:00:00 (xfr#25, to-chk=19/48)
+::I >f+++++++++ 1036000 sub dir/file 28.bin
+       43468002  73%  702.09MB/s    0:00:00 (xfr#26, to-chk=18/48)
+::I >f+++++++++ 1073000 sub dir/file 29.bin
+       44541002  75%  707.44MB/s    0:00:00 (xfr#27, to-chk=17/48)
+::I >f+++++++++ 111000 sub dir/file 3.bin
+       44652002  75%  697.58MB/s    0:00:00 (xfr#28, to-chk=16/48)
+::I >f+++++++++ 1110000 sub dir/file 30.bin
+       45762002  77%  703.40MB/s    0:00:00 (xfr#29, to-chk=15/48)
+::I >f+++++++++ 1147000 sub dir/file 31.bin
+       46909002  79%  709.60MB/s    0:00:00 (xfr#30, to-chk=14/48)
+::I >f+++++++++ 1184000 sub dir/file 32.bin
+       48093002  81%  705.14MB/s    0:00:00 (xfr#31, to-chk=13/48)
+::I >f+++++++++ 1221000 sub dir/file 33.bin
+       49314002  83%  712.09MB/s    0:00:00 (xfr#32, to-chk=12/48)
+::I >f+++++++++ 1258000 sub dir/file 34.bin
+       50572002  85%  719.37MB/s    0:00:00 (xfr#33, to-chk=11/48)
+::I >f+++++++++ 1295000 sub dir/file 35.bin
+       51867002  88%  716.42MB/s    0:00:00 (xfr#34, to-chk=10/48)
+::I >f+++++++++ 1332000 sub dir/file 36.bin
+       53199002  90%  724.33MB/s    0:00:00 (xfr#35, to-chk=9/48) 
+::I >f+++++++++ 1369000 sub dir/file 37.bin
+       54568002  92%  722.35MB/s    0:00:00 (xfr#36, to-chk=8/48)
+::I >f+++++++++ 1406000 sub dir/file 38.bin
+       55974002  95%  730.82MB/s    0:00:00 (xfr#37, to-chk=7/48)
+::I >f+++++++++ 1443000 sub dir/file 39.bin
+       57417002  97%  729.68MB/s    0:00:00 (xfr#38, to-chk=6/48)
+::I >f+++++++++ 148000 sub dir/file 4.bin
+       57565002  97%  731.56MB/s    0:00:00 (xfr#39, to-chk=5/48)
+::I >f+++++++++ 185000 sub dir/file 5.bin
+       57750002  98%  733.91MB/s    0:00:00 (xfr#40, to-chk=4/48)
+::I >f+++++++++ 222000 sub dir/file 6.bin
+       57972002  98%  727.04MB/s    0:00:00 (xfr#41, to-chk=3/48)
+::I >f+++++++++ 259000 sub dir/file 7.bin
+       58231002  98%  730.29MB/s    0:00:00 (xfr#42, to-chk=2/48)
+::I >f+++++++++ 296000 sub dir/file 8.bin
+       58527002  99%  734.01MB/s    0:00:00 (xfr#43, to-chk=1/48)
+::I >f+++++++++ 333000 sub dir/file 9.bin
+       58860002  99%  728.60MB/s    0:00:00 (xfr#44, to-chk=0/48)       58860002  99%  728.60MB/s    0:00:00 (xfr#44, to-chk=0/48)       58860002  99%  728.60MB/s    0:00:00 (xfr#44, to-chk=0/48)       58860002  99%  728.60MB/s    0:00:00 (xfr#44, to-chk=0/48)
+
+Number of files: 48 (reg: 44, dir: 3, link: 1)
+Number of created files: 48 (reg: 44, dir: 3, link: 1)
+Number of deleted files: 0
+Number of regular files transferred: 44
+Total file size: 58860010 bytes
+Total transferred file size: 58860002 bytes
+Literal data: 58860002 bytes
+Matched data: 0 bytes
+File list size: 0
+File list generation time: 0.001 seconds
+File list transfer time: 0.000 seconds
+Total bytes sent: 58877016
+Total bytes received: 907
+
+sent 58877016 bytes  received 907 bytes  117755846.00 bytes/sec
+total size is 58860010  speedup is 1.00
