@@ -53,6 +53,15 @@ type Options struct {
 	AccurateProgress bool       `json:"accurateProgress,omitempty"`
 }
 
+// ExtraWritePaths implémente engine.ExtraWrites : --backup-dir reçoit les
+// versions remplacées ou supprimées.
+func (o *Options) ExtraWritePaths() []string {
+	if o == nil || o.BackupDir == "" {
+		return nil
+	}
+	return []string{o.BackupDir}
+}
+
 const maxPatterns = 200
 
 // DecodeOptions décode strictement (champs inconnus refusés) et valide.

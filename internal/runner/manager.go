@@ -240,7 +240,7 @@ func (m *Manager) submitSnapshot(ctx context.Context, snap SpecSnapshot, trig st
 	}
 	raw, _ := json.Marshal(snap)
 	jid := snap.JobID
-	writes := writtenPlaces(spec.Mode, spec.Source, spec.Destination) // hors verrou : accès disque
+	writes := writtenPlaces(spec) // hors verrou : accès disque
 	logRel, _ := LogPaths(id, now)
 	r := store.Run{ID: id, JobID: &jid, JobName: snap.Name, Engine: string(snap.Engine), Trigger: trig,
 		TriggeredBy: by, DryRun: dryRun, Attempt: attempt, State: store.StateQueued, SpecJSON: string(raw), QueuedAt: now, LogPath: logRel}

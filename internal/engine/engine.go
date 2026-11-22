@@ -211,6 +211,13 @@ type Execution interface {
 }
 
 // Engine est un moteur de transfert.
+// ExtraWrites est implémenté par les options d'un moteur qui écrivent hors de
+// la destination (rsync --backup-dir). Chemins sur le système de fichiers de
+// la destination ; sert à la détection de chevauchement entre jobs.
+type ExtraWrites interface {
+	ExtraWritePaths() []string
+}
+
 type Engine interface {
 	Kind() Kind
 	// DecodeOptions décode et valide les options propres au moteur (JSON du job).

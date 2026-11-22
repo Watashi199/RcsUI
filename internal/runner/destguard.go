@@ -35,11 +35,23 @@ func writtenEndpoints(mode engine.Mode, src, dst engine.Endpoint) []engine.Endpo
 // place est un emplacement écrit : système de fichiers et chemin normalisé.
 type place struct{ fs, path string }
 
-// writtenPlaces calcule les emplacements écrits par un run. Les chemins locaux
-// ont leurs symlinks résolus (comme le font les moteurs) : appel hors m.mu.
-func writtenPlaces(mode engine.Mode, src, dst engine.Endpoint) []place {
+// writtenPlaces calcule les emplacements écrits par un run : aucun pour un
+// dry-run. Les chemins locaux ont leurs symlinks résolus (comme le font les
+// moteurs) : appel hors m.mu.
+func writtenPlaces(s engine.Spec) []place {
+	if s.DryRun {
+		return nil
+	}
+	eps := writtenEndpoints(s.Mode, s.Source, s.Destination)
+	if x, ok := s.Options.(engine.ExtraWrites); ok {
+		for _, p := range x.ExtraWritePaths() {
+			e := s.Destination
+			e.Path = p
+			eps = append(eps, e)
+		}
+	}
 	var out []place
-	for _, e := range writtenEndpoints(mode, src, dst) {
+	for _, e := range eps {
 		fsID, p := location(e)
 		out = append(out, place{fsID, p})
 	}

@@ -21,7 +21,7 @@ func endpointsOverlap(a, b engine.Endpoint) bool {
 }
 
 func writesOverlap(a, b engine.Spec) bool {
-	return placesOverlap(writtenPlaces(a.Mode, a.Source, a.Destination), writtenPlaces(b.Mode, b.Source, b.Destination))
+	return placesOverlap(writtenPlaces(a), writtenPlaces(b))
 }
 
 // Deux chemins vers le même dossier via un symlink se chevauchent (les moteurs
@@ -97,7 +97,23 @@ func TestWritesOverlap(t *testing.T) {
 	if !writesOverlap(spec(engine.ModeCopy, "/a", "/p1"), spec(engine.ModeBisync, "/p1", "/p2")) {
 		t.Error("bisync path1 not treated as written")
 	}
+	// Un dry-run n'écrit rien.
+	dry := spec(engine.ModeSync, "/b", "/out")
+	dry.DryRun = true
+	if writesOverlap(spec(engine.ModeCopy, "/a", "/out"), dry) || writesOverlap(dry, spec(engine.ModeCopy, "/a", "/out")) {
+		t.Error("dry run treated as a writer")
+	}
+	// Dossier de sauvegarde (rsync --backup-dir) : écrit aussi.
+	bk := spec(engine.ModeSync, "/a", "/mirror")
+	bk.Options = backupOpts{"/history"}
+	if !writesOverlap(spec(engine.ModeCopy, "/b", "/history/2026"), bk) {
+		t.Error("backup dir not treated as written")
+	}
 }
+
+type backupOpts struct{ dir string }
+
+func (b backupOpts) ExtraWritePaths() []string { return []string{b.dir} }
 
 func (e *env) jobAt(t *testing.T, name, dst string, exclusive bool) int64 {
 	t.Helper()
@@ -143,6 +159,13 @@ func TestExclusiveDestination(t *testing.T) {
 	}
 	e.nextStart(t).finish(engine.Result{Outcome: engine.OutcomeSucceeded})
 
+	// Un dry-run sur la destination ne la réserve pas.
+	dry := e.jobAt(t, "dry", "/backup/photos", false)
+	if _, err := e.m.Submit(ctx, dry, store.TriggerManual, nil, true); err != nil {
+		t.Fatal(err)
+	}
+	xd := e.nextStart(t) // reste actif pendant la suite
+	defer xd.finish(engine.Result{Outcome: engine.OutcomeSucceeded})
 	// Destination libérée : le job exclusif démarre.
 	x.finish(engine.Result{Outcome: engine.OutcomeSucceeded})
 	waitState(t, e.db, id, store.StateSucceeded)
