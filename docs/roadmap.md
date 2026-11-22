@@ -46,7 +46,8 @@ Critère de fini : `v1.0.1` publiée par la nouvelle CI, sans avertissement, Dep
    défaut : le job ne démarre pas si un autre job actif (en file ou en cours) écrit au même endroit. Écrits :
    la destination, plus la source pour `move`, les deux côtés pour `bisync` et le `--backup-dir` rsync ; un
    dry-run n'écrit rien ; même endroit = même système de
-   fichiers (local, même remote, même hôte SSH:port) et chemins égaux ou imbriqués, symlinks locaux résolus. Planification et relance
+   fichiers (local, même remote, même hôte SSH:port) et chemins égaux ou imbriqués, symlinks locaux résolus ; un chemin SSH relatif (dossier personnel distant inconnu) est réputé chevaucher tout
+   chemin absolu du même hôte. Planification et relance
    automatique → run `skipped` avec le nom du job qui occupe la destination ; lancement manuel → 409
    `destination_busy`. L'option ne protège que le job qui l'active (un autre job peut démarrer pendant lui).
 

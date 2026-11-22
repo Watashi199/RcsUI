@@ -14,11 +14,7 @@ import (
 
 func local(p string) engine.Endpoint { return engine.Endpoint{Type: engine.EndpointLocal, Path: p} }
 
-func endpointsOverlap(a, b engine.Endpoint) bool {
-	fa, pa := location(a)
-	fb, pb := location(b)
-	return place{fa, pa}.overlaps(place{fb, pb})
-}
+func endpointsOverlap(a, b engine.Endpoint) bool { return location(a).overlaps(location(b)) }
 
 func writesOverlap(a, b engine.Spec) bool {
 	return placesOverlap(writtenPlaces(a), writtenPlaces(b))
@@ -46,7 +42,10 @@ func TestOverlapThroughSymlink(t *testing.T) {
 
 func TestEndpointsOverlap(t *testing.T) {
 	ssh := func(host string, port int, p string) engine.Endpoint {
-		return engine.Endpoint{Type: engine.EndpointSSH, Path: p, SSH: &engine.SSHTarget{Host: host, Port: port}}
+		return engine.Endpoint{Type: engine.EndpointSSH, Path: p, SSH: &engine.SSHTarget{Host: host, Port: port, User: "bk"}}
+	}
+	sshAs := func(user, p string) engine.Endpoint {
+		return engine.Endpoint{Type: engine.EndpointSSH, Path: p, SSH: &engine.SSHTarget{Host: "nas", User: user}}
 	}
 	remote := func(r, p string) engine.Endpoint {
 		return engine.Endpoint{Type: engine.EndpointRemote, Remote: r, Path: p}
@@ -69,6 +68,13 @@ func TestEndpointsOverlap(t *testing.T) {
 		{ssh("NAS", 0, "/b"), ssh("nas", 22, "/b/x"), true},
 		{ssh("nas", 22, "/b"), ssh("nas", 2222, "/b"), false},
 		{ssh("nas", 22, "/b"), local("/b"), false},
+		// Chemins relatifs : dossier personnel distant inconnu.
+		{ssh("nas", 22, "backup"), ssh("nas", 22, "/home/bk/backup"), true},
+		{ssh("nas", 22, "backup"), ssh("nas", 22, "~/backup/x"), true},
+		{ssh("nas", 22, "backup"), ssh("nas", 22, "photos"), false},
+		{sshAs("a", "backup"), sshAs("b", "photos"), true},
+		{ssh("nas", 22, "~other/x"), ssh("nas", 22, "photos"), true},
+		{ssh("nas", 22, "backup"), ssh("nas2", 22, "/srv"), false},
 	}
 	for _, c := range cases {
 		if got := endpointsOverlap(c.a, c.b); got != c.want {

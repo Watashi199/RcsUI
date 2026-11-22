@@ -144,3 +144,5 @@ func (o *Options) Warnings(nonRoot bool) []string {
 
 // String est utilisé dans les messages d'erreur.
 func (d DeleteMode) String() string { return fmt.Sprintf("%q", string(d)) }
+
+var _ engine.ExtraWrites = (*Options)(nil)

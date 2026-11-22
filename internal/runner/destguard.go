@@ -33,7 +33,14 @@ func writtenEndpoints(mode engine.Mode, src, dst engine.Endpoint) []engine.Endpo
 }
 
 // place est un emplacement écrit : système de fichiers et chemin normalisé.
-type place struct{ fs, path string }
+//
+// Un chemin SSH relatif (ou en ~/) est résolu par le serveur distant depuis le
+// dossier personnel de l'utilisateur, inconnu ici : home porte cet utilisateur
+// et path est relatif à ce dossier.
+type place struct {
+	fs, path string
+	home     string // non vide : chemin relatif au dossier personnel de cet utilisateur
+}
 
 // writtenPlaces calcule les emplacements écrits par un run : aucun pour un
 // dry-run. Les chemins locaux ont leurs symlinks résolus (comme le font les
@@ -50,17 +57,18 @@ func writtenPlaces(s engine.Spec) []place {
 			eps = append(eps, e)
 		}
 	}
-	var out []place
+	out := make([]place, 0, len(eps))
 	for _, e := range eps {
-		fsID, p := location(e)
-		out = append(out, place{fsID, p})
+		out = append(out, location(e))
 	}
 	return out
 }
 
 // location identifie le système de fichiers d'un endpoint (même machine, même
 // remote) et le chemin normalisé dans celui-ci.
-func location(e engine.Endpoint) (fsID, p string) {
+func location(e engine.Endpoint) place {
+	var fsID, home string
+	p := e.Path
 	switch e.Type {
 	case engine.EndpointSSH:
 		if e.SSH != nil {
@@ -69,24 +77,38 @@ func location(e engine.Endpoint) (fsID, p string) {
 				port = 22
 			}
 			fsID = fmt.Sprintf("ssh:%s:%d", strings.ToLower(e.SSH.Host), port)
+			if !strings.HasPrefix(p, "/") {
+				home = e.SSH.User
+				if strings.HasPrefix(p, "~") && !strings.HasPrefix(p, "~/") && p != "~" {
+					home = "~" // dossier d'un autre utilisateur : inconnu
+				}
+				p = strings.TrimPrefix(strings.TrimPrefix(p, "~"), "/")
+			}
 		}
 	case engine.EndpointRemote:
 		fsID = "remote:" + e.Remote
 	default:
 		fsID = "local"
 	}
-	p = e.Path
 	if fsID == "local" && p != "" {
 		p = paths.Canonical(p)
 	}
 	p = strings.ReplaceAll(p, `\`, "/")
 	p = path.Clean("/" + p)
-	return fsID, p
+	return place{fs: fsID, path: p, home: home}
 }
 
-// overlaps : même système de fichiers et un chemin inclus dans l'autre.
+// overlaps : même système de fichiers et un chemin inclus dans l'autre. Faute
+// de connaître le dossier personnel distant, un chemin SSH relatif chevauche
+// tout chemin absolu du même hôte, et tout chemin relatif d'un autre utilisateur.
 func (a place) overlaps(b place) bool {
-	return a.fs == b.fs && (within(a.path, b.path) || within(b.path, a.path))
+	if a.fs != b.fs {
+		return false
+	}
+	if a.home != b.home || a.home == "~" {
+		return true
+	}
+	return within(a.path, b.path) || within(b.path, a.path)
 }
 
 // within indique si p est q ou se trouve sous q.
