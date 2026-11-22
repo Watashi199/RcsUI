@@ -579,19 +579,24 @@ func (m *Manager) finish(ar *activeRun, res engine.Result, sink *runSink) {
 	if msg != "" {
 		patch.ErrorMessage = &msg
 	}
+	// La relance est décidée et enregistrée pendant que le run est encore actif,
+	// puis armée dans la même section critique que sa libération (cf. armRetryLocked).
+	var retry *store.PendingRetry
+	if to == store.StateFailed && res.Retryable && !shutdown {
+		retry = m.planRetry(ar)
+	}
 	if err := m.transition(ar, from, to, patch); err != nil {
 		m.d.Log.Error("final transition", "run", ar.run.ID, "from", from, "to", to, "err", err)
 	}
+	f := Finished{Run: ar.finalRun(to, now, msg, res.ExitCode, final), Retryable: res.Retryable}
 	m.mu.Lock()
 	ar.progress = final
 	m.release(ar, true)
+	if retry != nil {
+		f.RetryAt = m.armRetryLocked(*retry)
+	}
 	m.mu.Unlock()
 	m.d.Broker.EndRun(ar.run.ID)
-
-	f := Finished{Run: ar.finalRun(to, now, msg, res.ExitCode, final), Retryable: res.Retryable}
-	if to == store.StateFailed && res.Retryable && !shutdown {
-		f.RetryAt = m.scheduleRetry(ar)
-	}
 	m.runHooks(f)
 }
 
@@ -656,8 +661,9 @@ func suffix(msg string) string {
 func (m *Manager) Shutdown(ctx context.Context) error {
 	m.mu.Lock()
 	m.closing = true
+	// Timers arrêtés ; les relances restent dans pending_retries (RestoreRetries au démarrage).
 	for jid := range m.retries {
-		m.clearRetryLocked(jid)
+		m.stopRetryLocked(jid)
 	}
 	queued := m.queue
 	m.queue = nil

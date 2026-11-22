@@ -170,6 +170,11 @@ func run() error {
 	if n > 0 {
 		log.Warn("runs interrupted by previous shutdown", "count", n)
 	}
+	if n, err := mgr.RestoreRetries(ctx); err != nil {
+		return fmt.Errorf("restore pending retries: %w", err)
+	} else if n > 0 {
+		log.Info("automatic retries restored", "count", n)
+	}
 	cleanRunTmp(cfg.RunTmpDir(), log)
 
 	sched := scheduler.New(mgr, db, time.Local, log)
