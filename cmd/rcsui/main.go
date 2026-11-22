@@ -150,9 +150,12 @@ func run() error {
 		}
 		defer rclone.Finalize()
 		switch {
-		case rc.Crypt.Converted && rc.Crypt.Encrypted:
+		case rc.Crypt.Converted && rc.Crypt.Encrypted && rc.Crypt.Backup != "":
 			log.Warn("rclone.conf is now encrypted with a key derived from the master key; "+
 				"delete the plain-text backup once remotes are checked", "backup", rc.Crypt.Backup)
+		case rc.Crypt.Converted && rc.Crypt.Encrypted:
+			// Installation neuve : fichier vide, aucune copie en clair.
+			log.Info("rclone.conf encrypted with a key derived from the master key")
 		case rc.Crypt.Converted:
 			log.Warn("rclone.conf decrypted (RCSUI_RCLONE_CONFIG_ENCRYPT=false)", "backup", rc.Crypt.Backup)
 		case !rc.Crypt.Encrypted:
