@@ -94,8 +94,15 @@ func TestAPITokens(t *testing.T) {
 	// Flux SSE : revalidation par le jeton, pas par un cookie absent.
 	sreq, _ := http.NewRequest("GET", h.ts.URL+"/api/v1/events", nil)
 	sreq.Header.Set("Authorization", "Bearer "+full)
-	if !h.server.sessionStillValid(sreq) {
+	opened := &auth.Current{User: self}
+	if !h.server.sessionStillValid(sreq, opened) {
 		t.Error("bearer stream not revalidated")
+	}
+	// Rôle effectif changé depuis l'ouverture du flux : fermeture.
+	stale := &auth.Current{User: self}
+	stale.User.Role = store.RoleViewer
+	if h.server.sessionStillValid(sreq, stale) {
+		t.Error("stream kept after a role change")
 	}
 
 	// Jeton plafonné à viewer : pas de route admin.
@@ -170,7 +177,7 @@ func TestAPITokens(t *testing.T) {
 	if code, _ := bearer(t, h, full, "GET", "/api/v1/jobs", nil); code != 401 {
 		t.Errorf("revoked token: %d", code)
 	}
-	if h.server.sessionStillValid(sreq) {
+	if h.server.sessionStillValid(sreq, opened) {
 		t.Error("revoked token still valid for an open stream")
 	}
 }

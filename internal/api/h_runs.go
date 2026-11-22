@@ -438,14 +438,18 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request, runID string, al
 }
 
 // sessionStillValid revalide l'identifiant utilisé par la requête : jeton
-// d'API (expiration, révocation, compte désactivé) ou cookie de session.
-func (s *Server) sessionStillValid(r *http.Request) bool {
+// d'API (expiration, révocation, compte désactivé) ou cookie de session. Un
+// rôle effectif différent de celui de l'ouverture du flux le ferme : le client
+// se reconnecte avec ses droits actuels.
+func (s *Server) sessionStillValid(r *http.Request, cur *auth.Current) bool {
+	var now *auth.Current
+	var err error
 	if raw, ok := auth.BearerToken(r); ok {
-		_, err := s.Sessions.LookupAPIToken(r, raw)
-		return err == nil
+		now, err = s.Sessions.LookupAPIToken(r, raw)
+	} else {
+		now, err = s.Sessions.Lookup(r)
 	}
-	_, err := s.Sessions.Lookup(r)
-	return err == nil
+	return err == nil && now.User.ID == cur.User.ID && now.User.Role == cur.User.Role
 }
 
 func (s *Server) handleGlobalEvents(w http.ResponseWriter, r *http.Request, cur *auth.Current) {
@@ -476,7 +480,7 @@ func (s *Server) handleGlobalEvents(w http.ResponseWriter, r *http.Request, cur 
 		_, ok := visible[e.JobID]
 		return ok
 	}
-	s.stream(w, r, "", allowed, func() bool { return s.sessionStillValid(r) && refresh() })
+	s.stream(w, r, "", allowed, func() bool { return s.sessionStillValid(r, cur) && refresh() })
 }
 
 func (s *Server) handleRunEvents(w http.ResponseWriter, r *http.Request, cur *auth.Current) {
@@ -485,7 +489,7 @@ func (s *Server) handleRunEvents(w http.ResponseWriter, r *http.Request, cur *au
 		return
 	}
 	recheck := func() bool {
-		if !s.sessionStillValid(r) {
+		if !s.sessionStillValid(r, cur) {
 			return false
 		}
 		p, err := s.runAccess(r, cur, run)
