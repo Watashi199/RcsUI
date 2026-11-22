@@ -437,7 +437,13 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request, runID string, al
 	}
 }
 
+// sessionStillValid revalide l'identifiant utilisé par la requête : jeton
+// d'API (expiration, révocation, compte désactivé) ou cookie de session.
 func (s *Server) sessionStillValid(r *http.Request) bool {
+	if raw, ok := auth.BearerToken(r); ok {
+		_, err := s.Sessions.LookupAPIToken(r, raw)
+		return err == nil
+	}
 	_, err := s.Sessions.Lookup(r)
 	return err == nil
 }

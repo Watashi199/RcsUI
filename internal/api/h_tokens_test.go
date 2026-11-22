@@ -79,6 +79,25 @@ func TestAPITokens(t *testing.T) {
 		}
 	}
 
+	// Ni réinitialisation de mot de passe, ni modification du compte propriétaire.
+	ops, _ := h.db.GetUserByUsername(ctx, "ops")
+	self, _ := h.db.GetUserByUsername(ctx, "admin")
+	if code, out := bearer(t, h, full, "PATCH", "/api/v1/users/"+itoa(ops.ID), map[string]any{"password": "another-password-1"}); code != 403 || errCode(out) != "session_required" {
+		t.Errorf("token password reset: %d %v", code, out)
+	}
+	if code, _ := bearer(t, h, full, "PATCH", "/api/v1/users/"+itoa(self.ID), map[string]any{"disabled": true}); code != 403 {
+		t.Errorf("token patching its owner: %d", code)
+	}
+	if code, out := bearer(t, h, full, "PATCH", "/api/v1/users/"+itoa(ops.ID), map[string]any{"role": "viewer"}); code != 200 {
+		t.Errorf("token role change on another user: %d %v", code, out)
+	}
+	// Flux SSE : revalidation par le jeton, pas par un cookie absent.
+	sreq, _ := http.NewRequest("GET", h.ts.URL+"/api/v1/events", nil)
+	sreq.Header.Set("Authorization", "Bearer "+full)
+	if !h.server.sessionStillValid(sreq) {
+		t.Error("bearer stream not revalidated")
+	}
+
 	// Jeton plafonné à viewer : pas de route admin.
 	viewer := newToken(t, admin, map[string]any{"name": "dashboard", "role": "viewer", "expiresInDays": 30})
 	if code, _ := bearer(t, h, viewer, "GET", "/api/v1/users", nil); code != 403 {
@@ -150,6 +169,9 @@ func TestAPITokens(t *testing.T) {
 	}
 	if code, _ := bearer(t, h, full, "GET", "/api/v1/jobs", nil); code != 401 {
 		t.Errorf("revoked token: %d", code)
+	}
+	if h.server.sessionStillValid(sreq) {
+		t.Error("revoked token still valid for an open stream")
 	}
 }
 

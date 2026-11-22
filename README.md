@@ -100,7 +100,7 @@ mot de passe est dérivé de la clé maître par HKDF-SHA256 : il n'y a rien de 
 Page « Jetons d'API » (lien sous le nom d'utilisateur) : un jeton `rcs_…` permet d'appeler l'API depuis un script avec
 vos droits, plafonnés au rôle choisi (jamais au-delà de votre rôle courant). Il est affiché une seule fois ; seule son
 empreinte SHA-256 est stockée. Pas de CSRF ni de cookie : l'en-tête `Authorization` suffit. Un jeton ne peut ni
-changer le mot de passe ni gérer les jetons ; il cesse de fonctionner si le compte est désactivé ou supprimé, s'il
+changer ou réinitialiser un mot de passe, ni modifier le compte de son propriétaire, ni gérer les jetons ; il cesse de fonctionner si le compte est désactivé ou supprimé, s'il
 expire ou s'il est révoqué. Exemple, lancer un job :
 
 ```bash
