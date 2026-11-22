@@ -120,6 +120,16 @@ func TestBisyncLifecycle(t *testing.T) {
 	if got := read(t, filepath.Join(p2, "b.txt")); got != "<missing>" {
 		t.Errorf("deletion not propagated to path2: %q", got)
 	}
+	// Récit INFO de bisync (journalisé sans contexte) : dans le log du run, une seule fois.
+	applying := 0
+	for _, l := range r.logs {
+		if l.Stream == "rclone" && strings.Contains(l.Msg, "Applying changes") {
+			applying++
+		}
+	}
+	if applying != 1 {
+		t.Errorf("bisync narrative: %d \"Applying changes\" lines, want 1; logs=%+v", applying, r.logs)
+	}
 
 	// 4. Filtres modifiés : bisync exige un resync au lieu de supprimer.
 	res, _ = run(t, e, bisyncSpec(t, root, 4, `{"v":1,"excludes":["c.txt"]}`, false, false))

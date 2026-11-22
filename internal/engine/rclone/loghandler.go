@@ -8,28 +8,44 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rclone/rclone/fs"
 	"github.com/rclone/rclone/fs/accounting"
 
 	"rcsui/internal/engine"
 )
 
 // logRouter associe un groupe de stats ("run/<id>") au Sink du run.
+//
+// Bisync journalise son récit (« Building Path1 and Path2 listings »,
+// « Applying changes »…) sans contexte, donc sans groupe. Quand un seul bisync
+// est en cours, ces messages lui sont attribués en direct ; avec plusieurs
+// bisyncs simultanés, l'attribution serait ambiguë et le run retombe sur le
+// champ "output" du résultat rc (messages NOTICE et plus, en fin de run).
 type logRouter struct {
-	mu    sync.RWMutex
-	sinks map[string]engine.Sink
+	mu     sync.RWMutex
+	sinks  map[string]engine.Sink
+	bisync map[string]bool // groupes des bisyncs en cours
+	live   map[string]bool // bisyncs ayant reçu des messages sans groupe en direct
 }
 
-func newLogRouter() *logRouter { return &logRouter{sinks: map[string]engine.Sink{}} }
+func newLogRouter() *logRouter {
+	return &logRouter{sinks: map[string]engine.Sink{}, bisync: map[string]bool{}, live: map[string]bool{}}
+}
 
-func (r *logRouter) register(group string, s engine.Sink) {
+func (r *logRouter) register(group string, s engine.Sink, bisync bool) {
 	r.mu.Lock()
 	r.sinks[group] = s
+	if bisync {
+		r.bisync[group] = true
+	}
 	r.mu.Unlock()
 }
 
 func (r *logRouter) unregister(group string) {
 	r.mu.Lock()
 	delete(r.sinks, group)
+	delete(r.bisync, group)
+	delete(r.live, group)
 	r.mu.Unlock()
 }
 
@@ -37,6 +53,33 @@ func (r *logRouter) get(group string) engine.Sink {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.sinks[group]
+}
+
+// soleBisync retourne le bisync en cours s'il est seul (sinon "", nil).
+func (r *logRouter) soleBisync() (string, engine.Sink) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if len(r.bisync) != 1 {
+		return "", nil
+	}
+	for g := range r.bisync {
+		return g, r.sinks[g]
+	}
+	return "", nil
+}
+
+func (r *logRouter) markLive(group string) {
+	r.mu.Lock()
+	r.live[group] = true
+	r.mu.Unlock()
+}
+
+// receivedLive indique si un bisync a reçu son récit en direct ; le champ
+// "output" du résultat ne doit alors pas être rejoué (doublons).
+func (r *logRouter) receivedLive(group string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.live[group]
 }
 
 // logHandler est installé via fs.SetLogger. Les enregistrements portant un
@@ -58,15 +101,35 @@ func (h *logHandler) WithGroup(name string) slog.Handler {
 	return &logHandler{inner: h.inner.WithGroup(name), router: h.router, attrs: h.attrs}
 }
 
+// noticeLevel : le niveau global de rclone est INFO (Init) pour que le récit de
+// bisync ne soit pas filtré avant d'arriver ici ; les messages sans run en
+// dessous de NOTICE sont jetés pour garder le log serveur aussi sobre qu'avant.
+const noticeLevel = fs.SlogLevelNotice
+
 func (h *logHandler) Handle(ctx context.Context, r slog.Record) error {
-	group, ok := accounting.StatsGroupFromContext(ctx)
-	if !ok {
-		return h.inner.Handle(ctx, r)
+	if group, ok := accounting.StatsGroupFromContext(ctx); ok {
+		if sink := h.router.get(group); sink != nil {
+			deliver(sink, r)
+			return nil
+		}
 	}
-	sink := h.router.get(group)
-	if sink == nil {
-		return h.inner.Handle(ctx, r)
+	if r.Level >= slog.LevelInfo {
+		if g, sink := h.router.soleBisync(); sink != nil {
+			deliver(sink, r)
+			h.router.markLive(g)
+			// Transmis aussi à rclone : bisync le capture dans "output", où
+			// l'engine cherche les consignes de resync.
+			return h.inner.Handle(ctx, r)
+		}
 	}
+	if r.Level < noticeLevel {
+		return nil
+	}
+	return h.inner.Handle(ctx, r)
+}
+
+// deliver écrit un enregistrement rclone dans le log du run.
+func deliver(sink engine.Sink, r slog.Record) {
 	object := ""
 	r.Attrs(func(a slog.Attr) bool {
 		if a.Key == "object" {
@@ -74,7 +137,8 @@ func (h *logHandler) Handle(ctx context.Context, r slog.Record) error {
 		}
 		return true
 	})
-	msg := Redact(r.Message)
+	// Bisync colore ses messages (codes ANSI) : inutiles dans le log du run.
+	msg := Redact(ansiRe.ReplaceAllString(r.Message, ""))
 	full := msg
 	if object != "" {
 		full = object + ": " + msg
@@ -97,7 +161,6 @@ func (h *logHandler) Handle(ctx context.Context, r slog.Record) error {
 		it.Time = t
 		sink.OnItem(it)
 	}
-	return nil
 }
 
 var sizeRe = regexp.MustCompile(`\(size ([0-9.]+)([KMGTP]i)?\)`)

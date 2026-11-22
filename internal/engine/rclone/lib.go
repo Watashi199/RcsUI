@@ -74,7 +74,13 @@ func Init(configPath, cacheDir string) (*Client, error) {
 	}
 	c := &Client{logs: router}
 	// Garder les jobs terminés 10 min (défaut 1 min) pour lire leur statut final.
-	if _, err := c.call("options/set", map[string]any{"rc": map[string]any{"JobExpireDuration": "10m"}}); err != nil {
+	// Niveau global INFO : bisync journalise son récit sans contexte (fs.Infof),
+	// filtré sinon avant d'atteindre logHandler. logHandler jette les messages
+	// sans run sous NOTICE, le log serveur garde donc son niveau habituel.
+	if _, err := c.call("options/set", map[string]any{
+		"rc":   map[string]any{"JobExpireDuration": "10m"},
+		"main": map[string]any{"LogLevel": "INFO"},
+	}); err != nil {
 		return nil, err
 	}
 	return c, nil
