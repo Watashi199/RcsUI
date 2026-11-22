@@ -5,7 +5,9 @@ package secrets
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hkdf"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -82,6 +84,22 @@ func LoadOrCreate(provided, path string) ([]byte, error) {
 		return nil, err
 	}
 	return key, nil
+}
+
+// Derive dérive de la clé maître une sous-clé de 32 octets propre à un usage
+// (HKDF-SHA256) : une seule clé à sauvegarder, des clés distinctes par usage.
+func Derive(master []byte, purpose string) ([]byte, error) {
+	return hkdf.Key(sha256.New, master, nil, purpose, 32)
+}
+
+// RcloneConfigPassword est le mot de passe de configuration rclone (chiffrement
+// de rclone.conf), dérivé de la clé maître.
+func RcloneConfigPassword(master []byte) (string, error) {
+	k, err := Derive(master, "rcsui/rclone-config/v1")
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(k), nil
 }
 
 func decodeKey(s string) ([]byte, error) {

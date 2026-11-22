@@ -41,6 +41,9 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
 		os.Exit(healthcheck())
 	}
+	if len(os.Args) > 1 && os.Args[1] == "rclone-config-password" {
+		os.Exit(printRclonePassword())
+	}
 	if err := run(); err != nil {
 		slog.Error("fatal", "err", err)
 		os.Exit(1)
@@ -136,11 +139,25 @@ func run() error {
 	}
 	var rc *rclone.Client
 	if !cfg.DisableRclone {
-		rc, err = rclone.Init(cfg.RcloneConfig(), cfg.RcloneCache())
+		pass, err := secrets.RcloneConfigPassword(key)
+		if err != nil {
+			return err
+		}
+		rc, err = rclone.Init(cfg.RcloneConfig(), cfg.RcloneCache(),
+			rclone.ConfigCrypt{Password: pass, Encrypt: cfg.RcloneEncrypt, BackupDir: cfg.BackupDir()})
 		if err != nil {
 			return fmt.Errorf("rclone: %w", err)
 		}
 		defer rclone.Finalize()
+		switch {
+		case rc.Crypt.Converted && rc.Crypt.Encrypted:
+			log.Warn("rclone.conf is now encrypted with a key derived from the master key; "+
+				"delete the plain-text backup once remotes are checked", "backup", rc.Crypt.Backup)
+		case rc.Crypt.Converted:
+			log.Warn("rclone.conf decrypted (RCSUI_RCLONE_CONFIG_ENCRYPT=false)", "backup", rc.Crypt.Backup)
+		case !rc.Crypt.Encrypted:
+			log.Warn("rclone.conf is not encrypted (RCSUI_RCLONE_CONFIG_ENCRYPT=false)")
+		}
 		// Listings de référence de bisync sur le volume : ils doivent survivre
 		// aux redémarrages, sinon chaque run exigerait un resync.
 		engines[engine.KindRclone] = &rclone.Engine{Client: rc, Paths: resolver, BisyncDir: filepath.Join(cfg.DataDir, "bisync")}
@@ -402,4 +419,32 @@ func healthcheck() int {
 		return 1
 	}
 	return 0
+}
+
+// printRclonePassword affiche le mot de passe de configuration rclone, pour
+// utiliser rclone.conf avec la CLI rclone (RCLONE_CONFIG_PASS). Ne crée jamais
+// de clé maître : sans clé existante, la configuration ne peut être chiffrée.
+func printRclonePassword() int {
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	path := filepath.Join(cfg.DataDir, "secret.key")
+	if cfg.SecretKey == "" {
+		if _, err := os.Stat(path); err != nil {
+			fmt.Fprintln(os.Stderr, "no master key:", err)
+			return 1
+		}
+	}
+	key, err := secrets.LoadOrCreate(cfg.SecretKey, path)
+	if err == nil {
+		var pass string
+		if pass, err = secrets.RcloneConfigPassword(key); err == nil {
+			fmt.Println(pass)
+			return 0
+		}
+	}
+	fmt.Fprintln(os.Stderr, err)
+	return 1
 }

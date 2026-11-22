@@ -31,8 +31,10 @@ type Config struct {
 	SessionAbsolute time.Duration
 	RsyncBinary     string
 	DisableRclone   bool
-	MetricsToken    string // vide : /metrics désactivé
-	OIDC            OIDC
+	// RcloneEncrypt : chiffrer rclone.conf (défaut) ; false le déchiffre au démarrage.
+	RcloneEncrypt bool
+	MetricsToken  string // vide : /metrics désactivé
+	OIDC          OIDC
 }
 
 // OIDC regroupe la configuration OpenID Connect (désactivé si Issuer est vide).
@@ -146,6 +148,9 @@ func Load() (Config, error) {
 		return c, fmt.Errorf("RCSUI_COOKIE_SECURE must be auto, true or false")
 	}
 	c.DisableRclone, _ = strconv.ParseBool(env("RCSUI_DISABLE_RCLONE", "false"))
+	if c.RcloneEncrypt, err = strconv.ParseBool(env("RCSUI_RCLONE_CONFIG_ENCRYPT", "true")); err != nil {
+		return c, fmt.Errorf("RCSUI_RCLONE_CONFIG_ENCRYPT must be true or false")
+	}
 	if err := loadOIDC(&c); err != nil {
 		return c, err
 	}

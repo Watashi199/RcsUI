@@ -45,7 +45,12 @@ Critère de fini : `v1.0.1` publiée par la nouvelle CI, sans avertissement, Dep
 4. **Chevauchement de destinations.** v1 : simple avertissement dans le formulaire. Option par job « ne pas
    démarrer si un autre job écrit dans la même destination » (run `skipped`), désactivée par défaut.
 
-## M10 — Secrets rclone chiffrés (v1.2) · M
+## M10 — Secrets rclone chiffrés (v1.2) · M ✅
+
+Fait : `rclone.conf` chiffré par défaut (`RCSUI_RCLONE_CONFIG_ENCRYPT`), mot de passe HKDF-SHA256 de la clé maître
+(`secrets.RcloneConfigPassword`), conversion au démarrage avec copie dans `/data/backups`, refus de démarrer avec
+une autre clé, retour arrière par la même variable, sous-commande `rcsui rclone-config-password` pour la CLI rclone.
+Spike : docs/spikes.md. Plan initial :
 
 Risque n° 7 de PLAN.md : `rclone.conf` n'est qu'obscurci (0600, masqué par l'API).
 

@@ -34,18 +34,23 @@ func (e *RPCError) Error() string {
 type Client struct {
 	cfgMu sync.Mutex // sérialise les écritures de config
 	logs  *logRouter
+	// Crypt : état du chiffrement de rclone.conf établi par Init.
+	Crypt ConfigCryptResult
 }
 
 var (
-	initOnce sync.Once
-	initErr  error
-	router   = newLogRouter()
+	initOnce  sync.Once
+	initErr   error
+	initCrypt ConfigCryptResult
+	router    = newLogRouter()
 )
 
 // Init initialise librclone (une seule fois par processus). configPath doit
 // être défini AVANT Initialize : RCLONE_CONFIG posé après le démarrage du
-// process est ignoré (constaté au spike M0).
-func Init(configPath, cacheDir string) (*Client, error) {
+// process est ignoré (constaté au spike M0). La clé de chiffrement de la
+// configuration est posée avant le premier chargement, puis le fichier est
+// chiffré (ou déchiffré) selon crypt (M10).
+func Init(configPath, cacheDir string, crypt ConfigCrypt) (*Client, error) {
 	initOnce.Do(func() {
 		if err := os.MkdirAll(filepath.Dir(configPath), 0o700); err != nil {
 			initErr = err
@@ -65,14 +70,20 @@ func Init(configPath, cacheDir string) (*Client, error) {
 			initErr = err
 			return
 		}
+		wasEncrypted, err := prepareConfigCrypt(configPath, crypt)
+		if err != nil {
+			initErr = err
+			return
+		}
 		librclone.Initialize()
 		// Logs routés vers le run via le groupe de stats porté par le ctx.
 		fs.SetLogger(&logHandler{inner: rclog.Handler, router: router})
+		initCrypt, initErr = finishConfigCrypt(configPath, crypt, wasEncrypted)
 	})
 	if initErr != nil {
 		return nil, initErr
 	}
-	c := &Client{logs: router}
+	c := &Client{logs: router, Crypt: initCrypt}
 	// Garder les jobs terminés 10 min (défaut 1 min) pour lire leur statut final.
 	// Niveau global INFO : bisync journalise son récit sans contexte (fs.Infof),
 	// filtré sinon avant d'atteindre logHandler. logHandler jette les messages
