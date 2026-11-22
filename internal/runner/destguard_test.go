@@ -74,6 +74,10 @@ func TestEndpointsOverlap(t *testing.T) {
 		{ssh("nas", 22, "backup"), ssh("nas", 22, "photos"), false},
 		{sshAs("a", "backup"), sshAs("b", "photos"), true},
 		{ssh("nas", 22, "~other/x"), ssh("nas", 22, "photos"), true},
+		{ssh("nas", 22, "backup"), ssh("nas", 22, "../bk/backup"), true},
+		{ssh("nas", 22, "a/../../x"), ssh("nas", 22, "photos"), true},
+		{ssh("nas", 22, "a/../b"), ssh("nas", 22, "b/c"), true},
+		{ssh("nas", 22, "a/../b"), ssh("nas", 22, "c"), false},
 		{ssh("nas", 22, "backup"), ssh("nas2", 22, "/srv"), false},
 	}
 	for _, c := range cases {

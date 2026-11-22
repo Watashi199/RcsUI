@@ -83,6 +83,10 @@ func location(e engine.Endpoint) place {
 					home = "~" // dossier d'un autre utilisateur : inconnu
 				}
 				p = strings.TrimPrefix(strings.TrimPrefix(p, "~"), "/")
+				// ".." remonte au-dessus du dossier personnel : emplacement inconnu.
+				if c := path.Clean(p); c == ".." || strings.HasPrefix(c, "../") {
+					home = "~"
+				}
 			}
 		}
 	case engine.EndpointRemote:
