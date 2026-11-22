@@ -16,9 +16,12 @@ mkdir -p "$ROOT_HOST"
 chmod 777 "$ROOT_HOST"
 
 # Sous Linux, le conteneur écrit avec l'uid de l'utilisateur courant pour que
-# les tests puissent relire et nettoyer les fichiers du dossier monté.
+# les tests puissent relire et nettoyer les fichiers du dossier monté. Pas en
+# root : l'image refuse PUID/PGID=0 (on garde alors l'uid par défaut, 1000).
 ids=()
-if [ "$(uname -s)" = "Linux" ]; then ids=(-e "PUID=$(id -u)" -e "PGID=$(id -g)"); fi
+if [ "$(uname -s)" = "Linux" ] && [ "$(id -u)" != "0" ] && [ "$(id -g)" != "0" ]; then
+	ids=(-e "PUID=$(id -u)" -e "PGID=$(id -g)")
+fi
 
 # Git Bash (Windows) : pas de conversion automatique des chemins « /e2e » passés
 # au conteneur ; le dossier monté est donné au format Windows.
