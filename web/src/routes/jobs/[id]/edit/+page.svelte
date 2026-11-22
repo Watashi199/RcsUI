@@ -24,7 +24,8 @@
 					retryInterrupted: j.retryInterrupted,
 					retryMax: j.retryMax ?? 0,
 					retryDelaySec: j.retryDelaySec || 300,
-					catchUp: j.catchUp ?? false
+					catchUp: j.catchUp ?? false,
+					exclusiveDestination: j.exclusiveDestination ?? false
 				};
 			})
 			.catch((e) => (error = errorMessage(e)));

@@ -137,7 +137,10 @@
 			<dt>{t('jobs.detail.source')}</dt>
 			<dd class="mono">{ep(job.source)}</dd>
 			<dt>{t('jobs.detail.destination')}</dt>
-			<dd class="mono">{ep(job.destination)}</dd>
+			<dd>
+				<span class="mono">{ep(job.destination)}</span>
+				{#if job.exclusiveDestination}<span class="muted"> · {t('jobs.detail.exclusiveDestination')}</span>{/if}
+			</dd>
 			<dt>{t('jobs.detail.options')}</dt>
 			<dd class="mono small">{optionList.length ? optionList.join(' · ') : t('jobs.detail.defaults')}</dd>
 			<dt>{t('jobs.detail.schedule')}</dt>

@@ -292,6 +292,8 @@ func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {
 		writeError(w, http.StatusConflict, "conflict", "already exists")
 	case errors.Is(err, runner.ErrJobActive):
 		writeError(w, http.StatusConflict, "job_active", err.Error())
+	case errors.Is(err, runner.ErrDestinationBusy):
+		writeError(w, http.StatusConflict, "destination_busy", err.Error())
 	case errors.Is(err, runner.ErrNotActive):
 		writeError(w, http.StatusConflict, "run_not_active", err.Error())
 	case errors.Is(err, runner.ErrShuttingDown):

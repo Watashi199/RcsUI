@@ -117,6 +117,12 @@ func (m *Manager) fireRetry(jobID int64, attempt int, p *pendingRetry) {
 			return // conservée pour le prochain démarrage
 		}
 		m.d.Log.Warn("automatic retry not started", "job", j.Name, "attempt", attempt, "err", err)
+		if errors.Is(err, ErrDestinationBusy) {
+			// Visible dans l'historique, comme une planification sautée.
+			if err := m.recordSkipped(ctx, snap, store.TriggerRetry, attempt, err.Error()); err != nil {
+				m.d.Log.Error("record skipped retry", "job", j.Name, "err", err)
+			}
+		}
 		m.dropPersistedRetry(ctx, jobID)
 	}
 }

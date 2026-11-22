@@ -32,6 +32,8 @@ type jobInput struct {
 	RetryMax         int             `json:"retryMax"`
 	RetryDelaySec    int             `json:"retryDelaySec"` // 0 = défaut (300 s)
 	CatchUp          bool            `json:"catchUp"`
+	// ExclusiveDest : ne pas démarrer si un autre job actif écrit au même endroit.
+	ExclusiveDest bool `json:"exclusiveDestination"`
 }
 
 // Bornes des relances automatiques.
@@ -72,7 +74,7 @@ func (s *Server) checkJob(r *http.Request, cur *auth.Current, in *jobInput) (sto
 	}
 	j := store.Job{Name: in.Name, Engine: in.Engine, Mode: in.Mode, Source: in.Source, Destination: in.Destination,
 		Options: in.Options, RetryInterrupted: in.RetryInterrupted, RetryMax: in.RetryMax, RetryDelaySec: in.RetryDelaySec,
-		CatchUp: in.CatchUp}
+		CatchUp: in.CatchUp, ExclusiveDest: in.ExclusiveDest}
 	if j.RetryDelaySec == 0 {
 		j.RetryDelaySec = defaultRetryDelay
 	}

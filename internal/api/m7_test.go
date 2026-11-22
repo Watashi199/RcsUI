@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +14,7 @@ import (
 
 	"rcsui/internal/metrics"
 	"rcsui/internal/notify"
+	"rcsui/internal/runner"
 	"rcsui/internal/secrets"
 	"rcsui/internal/store"
 )
@@ -34,12 +36,26 @@ func TestJobRetryAndCatchUpFields(t *testing.T) {
 	delete(job, "retryDelaySec")
 	job["catchUp"] = true
 	code, out := admin.do("POST", "/api/v1/jobs", job)
-	if code != 201 || out["retryMax"] != float64(3) || out["retryDelaySec"] != float64(300) || out["catchUp"] != true {
+	if code != 201 || out["retryMax"] != float64(3) || out["retryDelaySec"] != float64(300) || out["catchUp"] != true ||
+		out["exclusiveDestination"] != false {
 		t.Fatalf("create: %d %v", code, out)
 	}
 	j, err := h.db.GetJob(context.Background(), int64(out["id"].(float64)))
-	if err != nil || j.RetryMax != 3 || j.RetryDelaySec != 300 || !j.CatchUp {
+	if err != nil || j.RetryMax != 3 || j.RetryDelaySec != 300 || !j.CatchUp || j.ExclusiveDest {
 		t.Fatalf("stored job: %+v %v", j, err)
+	}
+	// Option « destination exclusive » (M9.4), désactivée par défaut.
+	job["exclusiveDestination"] = true
+	if code, out := admin.do("PUT", fmt.Sprintf("/api/v1/jobs/%d", j.ID), job); code != 200 || out["exclusiveDestination"] != true {
+		t.Fatalf("update: %d %v", code, out)
+	}
+	if j, _ = h.db.GetJob(context.Background(), j.ID); !j.ExclusiveDest {
+		t.Fatal("exclusiveDestination not stored")
+	}
+	rec := httptest.NewRecorder()
+	h.server.fail(rec, httptest.NewRequest("POST", "/", nil), &runner.DestinationBusyError{JobName: "w"})
+	if rec.Code != 409 || !strings.Contains(rec.Body.String(), `"destination_busy"`) {
+		t.Errorf("destination busy: %d %s", rec.Code, rec.Body)
 	}
 }
 
