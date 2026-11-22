@@ -126,6 +126,37 @@ func TestNotificationSettings(t *testing.T) {
 		t.Fatalf("test webhook hits=%d event=%q", got, ev)
 	}
 
+	// Gotify et e-mail (M11) : jeton et mot de passe jamais renvoyés ; mot de
+	// passe SMTP conservé si absent, configuration e-mail supprimée par un hôte vide.
+	smtpIn := map[string]any{"host": "smtp.example.org", "port": 587, "security": "starttls", "username": "u",
+		"password": "smtp-secret-pw", "from": "rcsui@example.org", "to": []string{"ops@example.org"}}
+	code, out = admin.do("PUT", "/api/v1/settings/notifications", map[string]any{"on": "all",
+		"gotifyUrl": "https://gotify.example", "gotifyToken": "gotify-secret-tk", "smtp": smtpIn})
+	raw = mustJSON(out)
+	if code != 200 || strings.Contains(raw, "gotify-secret-tk") || strings.Contains(raw, "smtp-secret-pw") ||
+		out["gotifyTokenSet"] != true || out["smtp"].(map[string]any)["passwordSet"] != true {
+		t.Fatalf("gotify/smtp put: %d %s", code, raw)
+	}
+	delete(smtpIn, "password")
+	smtpIn["to"] = []string{"ops@example.org", "me@example.org"}
+	if code, out := admin.do("PUT", "/api/v1/settings/notifications", map[string]any{"on": "all", "smtp": smtpIn}); code != 200 {
+		t.Fatalf("smtp update: %d %v", code, out)
+	}
+	if c := n.Config(); c.SMTP == nil || c.SMTP.Password != "smtp-secret-pw" || len(c.SMTP.To) != 2 || c.GotifyToken != "gotify-secret-tk" {
+		t.Fatalf("config after smtp update: %+v", c)
+	}
+	smtpIn["from"] = "RcsUI <rcsui@example.org>"
+	if code, _ := admin.do("PUT", "/api/v1/settings/notifications", map[string]any{"on": "all", "smtp": smtpIn}); code != 400 {
+		t.Fatalf("display name in from accepted: %d", code)
+	}
+	if code, out := admin.do("PUT", "/api/v1/settings/notifications", map[string]any{"on": "all", "smtp": map[string]any{"host": ""}}); code != 200 || out["smtp"] != nil {
+		t.Fatalf("smtp removal: %d %v", code, out)
+	}
+	entries, _ = h.db.ListAudit(context.Background(), 0, 50)
+	if a := mustJSON(entries); strings.Contains(a, "smtp-secret-pw") || strings.Contains(a, "gotify-secret-tk") {
+		t.Fatal("secret in audit log")
+	}
+
 	// Réservé aux administrateurs.
 	op, _ := addUser(t, h, admin, "op", store.RoleOperator)
 	if code, _ := op.do("GET", "/api/v1/settings/notifications", nil); code != 403 {
