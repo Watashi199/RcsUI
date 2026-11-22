@@ -2,6 +2,8 @@ module rcsui
 
 go 1.26.5
 
+toolchain go1.27.4
+
 require (
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/rclone/rclone v1.76.0
