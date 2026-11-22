@@ -17,7 +17,7 @@ Ce document prend la suite de la roadmap de [PLAN.md](../PLAN.md) §11. Complexi
 
 | Point | Constat | Action |
 |---|---|---|
-| Actions CI en Node 20 | Avertissement de dépréciation sur tous les jobs. | Fait (PR #1, plus Codacy) ; job `release` validé par la v1.0.1. Workflow CodeQL avancé retiré : il entrait en conflit avec la configuration par défaut (PR #11). |
+| Actions CI en Node 20 | Avertissement de dépréciation sur tous les jobs. | Fait (PR #1) ; job `release` validé par la v1.0.1. Workflow CodeQL avancé retiré : il entrait en conflit avec la configuration par défaut (PR #11). Codacy retiré : redondant avec CodeQL et govulncheck. |
 | Renovate (§8, n° 16) | Aucune config dans le dépôt. | **Dependabot** à la place (intégré à GitHub, pas d'application à installer) : `.github/dependabot.yml`, mises à jour regroupées Go / npm / actions / images Docker, `cooldown` de 14 j. |
 | Images épinglées par digest (§8, n° 16) | `golang:1.27-alpine`, `node:24-alpine`, `alpine:3.22` par tag. | Épinglées en `tag@sha256:…` (index multi-arch) ; Dependabot met les digests à jour. |
 | `go mod verify` (§8, n° 16) | Absent de la CI. | Étape dans le job `go`. |
@@ -36,10 +36,10 @@ Critère de fini : `v1.0.1` publiée par la nouvelle CI, sans avertissement, Dep
 2. **Récit bisync dans le log du run.** Limite connue : les messages INFO de `sync/bisync` ne sont pas attribués
    au run. Piste : relever le niveau capté pour le groupe du run pendant un bisync, ou relire le fichier de log
    que bisync écrit dans `/data/bisync`. Spike d'une demi-journée avant de s'engager.
-3. **Planificateur.** `robfig/cron/v3` est inactif depuis 2021 (PLAN.md §12, n° 8). Il est encapsulé derrière
-   `scheduler.Scheduler` : remplacer par `go-co-op/gocron/v2` est local, mais n'apporte rien de visible tant
-   qu'aucun bug n'apparaît. **Recommandation : ne pas migrer**, garder le `cron.Recover` et réévaluer si un
-   correctif devient nécessaire.
+3. ✅ **Planificateur : on garde `robfig/cron/v3`** (décision du 2026-11-22). `go-co-op/gocron/v2` (v2.23.2)
+   dépend lui-même de `robfig/cron/v3` v3.0.1 et s'en sert pour analyser les expressions : migrer ne retirerait
+   pas la dépendance et n'en remplacerait que la boucle de déclenchement, au prix de deux dépendances de plus.
+   Le code reste encapsulé derrière `scheduler.Scheduler`, avec `cron.Recover` explicite.
 4. **Chevauchement de destinations.** v1 : simple avertissement dans le formulaire. Option par job « ne pas
    démarrer si un autre job écrit dans la même destination » (run `skipped`), désactivée par défaut.
 
@@ -75,4 +75,4 @@ M8 (tout de suite, petit, rattrape la v1.0) → M9.1 et M9.2 → M10 en `-rc` �
 
 1. Ordre validé : M8 → M9 → M10 → M11.
 2. M11 : tous les candidats sont retenus (sauf la limite de bande passante par job rclone, impossible).
-3. Planificateur (M9.3) : à confirmer.
+3. Planificateur (M9.3) : on garde `robfig/cron/v3` (voir M9.3).

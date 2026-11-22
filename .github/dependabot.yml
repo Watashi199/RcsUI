@@ -45,11 +45,6 @@ updates:
     groups:
       actions:
         patterns: ["*"]
-    ignore:
-      # codacy-analysis-cli-action v4 produit plusieurs runs SARIF par catégorie,
-      # refusés par upload-sarif : à adapter dans codacy.yml avant de monter.
-      - dependency-name: codacy/codacy-analysis-cli-action
-        update-types: [version-update:semver-major]
     commit-message:
       prefix: "ci"
 
