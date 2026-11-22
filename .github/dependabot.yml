@@ -24,6 +24,13 @@ updates:
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # Les types suivent le runtime (Node 24 LTS en CI et dans l'image).
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+      # TypeScript 7 : refusé par les peer deps de l'outillage Svelte/ESLint (ERESOLVE, 2026-11).
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
     commit-message:
       prefix: "build(npm)"
 
@@ -36,6 +43,11 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+    ignore:
+      # codacy-analysis-cli-action v4 produit plusieurs runs SARIF par catégorie,
+      # refusés par upload-sarif : à adapter dans codacy.yml avant de monter.
+      - dependency-name: codacy/codacy-analysis-cli-action
+        update-types: [version-update:semver-major]
     commit-message:
       prefix: "ci"
 
@@ -48,5 +60,9 @@ updates:
     groups:
       docker:
         patterns: ["*"]
+    ignore:
+      # Node : uniquement les versions LTS (paires), montées à la main avec la CI.
+      - dependency-name: node
+        update-types: [version-update:semver-major]
     commit-message:
       prefix: "build(docker)"
