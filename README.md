@@ -14,7 +14,7 @@ Cible : homelab / NAS, quelques utilisateurs, un seul `docker run`. Conception d
 | M4 — rôles admin / operator / viewer, droits par job, par remote et par identité SSH, audit | ✅ |
 | M5 — rsync over SSH : clés gérées (ed25519, import, chiffrées AES-GCM), known_hosts approuvés, `~/.ssh` monté | ✅ testé de bout en bout contre un sshd réel |
 | M6 — OIDC (code flow + PKCE, rôles par groupes, provisioning optionnel) | ✅ testé contre un IdP simulé |
-| M7 — durcissement et confort | 🚧 fait : CSP par hash, relances automatiques, rattrapage des cron manqués, notifications webhook/ntfy, `/metrics` Prometheus, bisync rclone, interface FR/EN, tests e2e Playwright en CI. Reste : release v1.0 signée (dépôt public, puis tag `v1.0.0`, voir [docs/release.md](docs/release.md)) |
+| M7 — durcissement et confort (CSP par hash, relances automatiques, rattrapage des cron manqués, notifications webhook/ntfy, `/metrics` Prometheus, bisync rclone, interface FR/EN, tests e2e Playwright en CI) | ✅ release **v1.0.0** signée sur GHCR ([docs/release.md](docs/release.md)) |
 
 ## Fonctionnalités M7
 
