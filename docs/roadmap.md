@@ -11,30 +11,28 @@ Ce document prend la suite de la roadmap de [PLAN.md](../PLAN.md) §11. Complexi
   release touche au stockage des secrets ou au schéma.
 - **Rien sans retour d'usage** pour les fonctions nouvelles (M11) : on les trie après quelques semaines d'usage réel.
 
-## M8 — Tenir les promesses de la v1.0 (v1.0.1) · S
+## M8 — Tenir les promesses de la v1.0 (v1.0.1) · S — ✅ fait (v1.0.1 publiée le 2026-11-22)
 
 Écarts entre PLAN.md et le dépôt, relevés après la release :
 
 | Point | Constat | Action |
 |---|---|---|
-| Actions CI en Node 20 | Avertissement de dépréciation sur tous les jobs. | Fait (PR #1, plus Codacy). Le job `release` ne sera validé qu'au tag `v1.0.1`. |
+| Actions CI en Node 20 | Avertissement de dépréciation sur tous les jobs. | Fait (PR #1, plus Codacy) ; job `release` validé par la v1.0.1. Workflow CodeQL avancé retiré : il entrait en conflit avec la configuration par défaut (PR #11). |
 | Renovate (§8, n° 16) | Aucune config dans le dépôt. | **Dependabot** à la place (intégré à GitHub, pas d'application à installer) : `.github/dependabot.yml`, mises à jour regroupées Go / npm / actions / images Docker, `cooldown` de 14 j. |
 | Images épinglées par digest (§8, n° 16) | `golang:1.27-alpine`, `node:24-alpine`, `alpine:3.22` par tag. | Épinglées en `tag@sha256:…` (index multi-arch) ; Dependabot met les digests à jour. |
 | `go mod verify` (§8, n° 16) | Absent de la CI. | Étape dans le job `go`. |
-| Couverture ≥ 80 % (§9) | Non mesurée en CI. En local (Windows, tests rsync réels sautés) : `paths` 83,9 %, `authz` 87,2 %, `runner` 83,2 %, `auth` 51,4 %, `engine/rsync` 49,5 %. | Mesurer sous Linux en CI, puis compléter `auth` (OIDC, rate limit) et `engine/rsync` si l'écart persiste ; seuil bloquant ensuite. |
-| Data race rclone (spikes.md) | « À signaler en amont » : aucune issue trouvée. | Issue + PR minimale sur `fs/accounting/stats.go` ; réactiver `-race` sur `internal/engine/rclone` dès la version corrigée. |
+| Couverture ≥ 80 % (§9) | Non mesurée en CI. Par package, `auth` affichait 51 % : ses tests OIDC vivent dans `internal/api`. | Mesure sur tous les tests (`-coverpkg`, `.github/coverage.sh`), seuil bloquant de 80 % sur les 5 packages ; tests de validation ajoutés à `engine/rsync` (79,9 % → 89,1 %). |
+| Data race rclone (spikes.md) | « À signaler en amont » : aucune issue trouvée. | Signalée : [rclone#10424](https://github.com/rclone/rclone/issues/10424). Réactiver `-race` sur `internal/engine/rclone` dès la version corrigée. |
 | Fixtures rsync 3.4.x (spikes.md, « Non vérifié ») | Seules 3.2.7 et 3.5.2 sont capturées. | Capturées avec rsync 3.4.3 (`alpine:3.20` ; Debian trixie est déjà en 3.5.0). Le parser passe sans modification. |
 
 Critère de fini : `v1.0.1` publiée par la nouvelle CI, sans avertissement, Dependabot actif.
 
 ## M9 — Robustesse (v1.1) · M
 
-1. **Relances persistées.** Aujourd'hui les relances programmées vivent en mémoire et sont perdues au redémarrage
-   (README, M7). Colonne `retry_at` sur le run (ou table `pending_retries`) relue par le runner au boot, avec la
-   même règle de priorité qu'en mémoire (un lancement manuel ou planifié remplace la relance).
-   À corriger au passage : `Manager.finish` écrit l'état `failed` et libère le job **avant** de programmer la
-   relance. Un lancement manuel arrivé dans cet intervalle ne remplace pas la relance, et le job tourne deux fois.
-   La relance doit être enregistrée dans la même section critique que la libération du job.
+1. ✅ **Relances persistées.** Table `pending_retries` (migration 0004), réarmée au démarrage par
+   `Manager.RestoreRetries` après `Recover` ; une relance échue pendant l'arrêt part aussitôt. Un nouveau run du
+   job la supprime en mémoire et en base. Corrigé au passage : la relance est enregistrée avant l'état final et
+   armée dans la même section critique que la libération du job (un lancement manuel ne peut plus s'intercaler).
 2. **Récit bisync dans le log du run.** Limite connue : les messages INFO de `sync/bisync` ne sont pas attribués
    au run. Piste : relever le niveau capté pour le groupe du run pendant un bisync, ou relire le fichier de log
    que bisync écrit dans `/data/bisync`. Spike d'une demi-journée avant de s'engager.

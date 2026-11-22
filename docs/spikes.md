@@ -79,7 +79,7 @@ Sans ce correctif, la progression live aurait été vide dans l'image Docker.
 Tous les packages passent, **sauf `internal/engine/rclone`** : data race **dans rclone v1.76.0**
 (`fs/accounting/stats.go`, `RemoteStats` lit `s.errors` et `s.lastError` après `s.mu.RUnlock()`, en concurrence
 avec `StatsInfo.Error()`). Déclenchée par tout appel `core/stats` pendant un transfert en erreur. Notre code n'y est
-pour rien ; à signaler en amont. La CI exécute ce package sans `-race`.
+pour rien ; signalé en amont : [rclone#10424](https://github.com/rclone/rclone/issues/10424). La CI exécute ce package sans `-race`.
 
 ## Non vérifié
 
