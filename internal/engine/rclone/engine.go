@@ -239,7 +239,7 @@ func (e *Engine) Start(_ context.Context, s engine.Spec, sink engine.Sink) (engi
 	}
 	group := "run/" + s.RunID
 	b.in["_group"] = group
-	e.Client.logs.register(group, sink)
+	e.Client.logs.register(group, sink, s.Mode == engine.ModeBisync)
 	jobID, err := e.Client.startAsync(b.method, b.in)
 	if err != nil {
 		e.Client.logs.unregister(group)
@@ -377,9 +377,15 @@ func (x *execution) run() {
 	x.mu.Lock()
 	cancelled := x.cancelled
 	x.mu.Unlock()
+	// "output" rejoué en fin de run, sans ce qui a déjà été reçu en direct
+	// (bisync seul en cours) : cf. logRouter.pendingOutput.
 	if x.bisync {
-		for _, l := range bisyncOutputLines(js.Output) {
-			l.Time, l.Msg = time.Now(), Redact(l.Msg)
+		lines := bisyncOutputLines(js.Output)
+		for i := range lines {
+			lines[i].Msg = Redact(lines[i].Msg)
+		}
+		for _, l := range x.c.logs.pendingOutput(x.group, lines) {
+			l.Time = time.Now()
 			x.sink.OnLog(l)
 		}
 	}

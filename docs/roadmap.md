@@ -33,9 +33,11 @@ Critère de fini : `v1.0.1` publiée par la nouvelle CI, sans avertissement, Dep
    `Manager.RestoreRetries` après `Recover` ; une relance échue pendant l'arrêt part aussitôt. Un nouveau run du
    job la supprime en mémoire et en base. Corrigé au passage : la relance est enregistrée avant l'état final et
    armée dans la même section critique que la libération du job (un lancement manuel ne peut plus s'intercaler).
-2. **Récit bisync dans le log du run.** Limite connue : les messages INFO de `sync/bisync` ne sont pas attribués
-   au run. Piste : relever le niveau capté pour le groupe du run pendant un bisync, ou relire le fichier de log
-   que bisync écrit dans `/data/bisync`. Spike d'une demi-journée avant de s'engager.
+2. ✅ **Récit bisync dans le log du run.** Cause : bisync journalise son récit sans contexte (`fs.Infof`, 71
+   appels en v1.76.0), filtré par le niveau **global** de rclone (NOTICE) avant d'atteindre notre handler.
+   Niveau global passé à INFO ; `logHandler` attribue en direct les messages sans groupe au bisync s'il est le
+   seul en cours (sinon repli sur le champ `output`, NOTICE et plus, en fin de run) et jette les autres messages
+   sans run sous NOTICE (log serveur inchangé). Codes couleur ANSI retirés.
 3. ✅ **Planificateur : on garde `robfig/cron/v3`** (décision du 2026-11-22). `go-co-op/gocron/v2` (v2.23.2)
    dépend lui-même de `robfig/cron/v3` v3.0.1 et s'en sert pour analyser les expressions : migrer ne retirerait
    pas la dépendance et n'en remplacerait que la boucle de déclenchement, au prix de deux dépendances de plus.
