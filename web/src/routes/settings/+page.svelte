@@ -4,6 +4,7 @@
 	import { t } from '#lib/i18n/i18n.svelte.ts';
 	import type { Settings, SystemInfo } from '#lib/types.ts';
 	import NotificationsForm from '#lib/components/NotificationsForm.svelte';
+	import ConfigTransfer from '#lib/components/ConfigTransfer.svelte';
 
 	let s = $state<Settings | null>(null);
 	let info = $state<SystemInfo | null>(null);
@@ -59,6 +60,8 @@
 
 {#if s}
 	<NotificationsForm />
+
+<ConfigTransfer />
 {/if}
 
 {#if info}

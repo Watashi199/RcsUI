@@ -73,7 +73,7 @@ Risque n° 7 de PLAN.md : `rclone.conf` n'est qu'obscurci (0600, masqué par l'A
 
 | Candidat | Intérêt | Coût |
 |---|---|---|
-| Export / import de la configuration (jobs, remotes, identités chiffrées, réglages) | Migration de machine, reprise après sinistre ; aujourd'hui il faut copier `/data` à froid. | M |
+| ✅ Export / import de la configuration (jobs, remotes, identités chiffrées, réglages) | Migration de machine, reprise après sinistre ; aujourd'hui il faut copier `/data` à froid. | M |
 | ✅ Jetons d'API personnels (portée par rôle, révocables) | Déclencher un job depuis un script ou une domotique sans session navigateur. | S–M |
 | ✅ Dupliquer un job | Confort, beaucoup de jobs se ressemblent. | S |
 | ✅ Canaux de notification supplémentaires (e-mail SMTP, Gotify) | Le webhook générique couvre déjà beaucoup via un relais. | S chacun |
