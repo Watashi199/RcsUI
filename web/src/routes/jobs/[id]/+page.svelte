@@ -7,6 +7,7 @@
 	import { bytes, between, dateTime, relative } from '#lib/format.ts';
 	import type { Endpoint, Job, Permission, Run, User } from '#lib/types.ts';
 	import StateBadge from '#lib/components/StateBadge.svelte';
+	import RunCharts from '#lib/components/RunCharts.svelte';
 	import { t, tn } from '#lib/i18n/i18n.svelte.ts';
 
 	const id = $derived(page.params.id);
@@ -190,6 +191,7 @@
 	{#if runs.length === 0}
 		<div class="card empty">{t('jobs.detail.neverRun')}</div>
 	{:else}
+		<RunCharts {runs} />
 		<div class="table-wrap">
 			<table>
 				<thead>
