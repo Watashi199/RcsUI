@@ -5,8 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,6 +36,8 @@ type Options struct {
 	MinAge             string   `json:"minAge,omitempty"`
 	MaxSize            string   `json:"maxSize,omitempty"`
 	MinSize            string   `json:"minSize,omitempty"`
+	// Bisync : options du mode bisync (ignoré, et refusé s'il est renseigné, dans les autres modes).
+	Bisync *BisyncOptions `json:"bisync,omitempty"`
 }
 
 var (
@@ -82,6 +86,9 @@ func DecodeOptions(raw []byte) (*Options, error) {
 			ve.Add("options.patterns."+strconv.Itoa(i), "invalid pattern")
 		}
 	}
+	if o.Bisync != nil {
+		o.Bisync.validate(ve)
+	}
 	if err := ve.Err(); err != nil {
 		return nil, err
 	}
@@ -96,6 +103,9 @@ type Engine struct {
 	PollInterval time.Duration
 	// StopTimeout : délai d'attente après job/stop (30 s par défaut).
 	StopTimeout time.Duration
+	// BisyncDir : répertoire de travail de bisync (listings de référence,
+	// verrous, fichiers de filtres). Vide : mode bisync indisponible.
+	BisyncDir string
 }
 
 var _ engine.Engine = (*Engine)(nil)
@@ -107,6 +117,8 @@ func (e *Engine) DecodeOptions(raw []byte) (any, error) { return DecodeOptions(r
 type built struct {
 	method string
 	in     map[string]any
+	// files : fichiers à écrire avant l'appel (chemin absolu → contenu).
+	files map[string][]byte
 }
 
 func (e *Engine) build(s engine.Spec) (built, error) {
@@ -115,9 +127,18 @@ func (e *Engine) build(s engine.Spec) (built, error) {
 		return built{}, fmt.Errorf("rclone: options not decoded")
 	}
 	ve := &engine.ValidationError{}
-	method := map[engine.Mode]string{engine.ModeCopy: "sync/copy", engine.ModeSync: "sync/sync", engine.ModeMove: "sync/move"}[s.Mode]
+	method := map[engine.Mode]string{engine.ModeCopy: "sync/copy", engine.ModeSync: "sync/sync", engine.ModeMove: "sync/move",
+		engine.ModeBisync: "sync/bisync"}[s.Mode]
 	if method == "" {
 		ve.Add("mode", "unsupported mode")
+	}
+	if s.Mode != engine.ModeBisync {
+		if o.Bisync != nil {
+			ve.Add("options.bisync", "only valid in bisync mode")
+		}
+		if s.Resync {
+			ve.Add("resync", "only valid in bisync mode")
+		}
 	}
 	src, err := BuildFs(s.Source, e.Paths, e.Client)
 	if err != nil {
@@ -128,9 +149,19 @@ func (e *Engine) build(s engine.Spec) (built, error) {
 		ve.Add("destination", err.Error())
 	}
 	if s.Source.Type == engine.EndpointLocal && s.Destination.Type == engine.EndpointLocal && src != "" && dst != "" {
-		if dst == src || len(dst) > len(src) && dst[:len(src)+1] == src+"/" {
+		if dst == src || within(dst, src) {
 			ve.Add("destination.path", "destination must not be inside the source")
 		}
+		if s.Mode == engine.ModeBisync && within(src, dst) {
+			ve.Add("source.path", "source must not be inside the destination")
+		}
+	}
+	if s.Mode == engine.ModeBisync {
+		b := e.buildBisync(s, o, src, dst, ve)
+		if err := ve.Err(); err != nil {
+			return built{}, err
+		}
+		return b, nil
 	}
 	if err := ve.Err(); err != nil {
 		return built{}, err
@@ -201,6 +232,11 @@ func (e *Engine) Start(_ context.Context, s engine.Spec, sink engine.Sink) (engi
 	if err != nil {
 		return nil, err
 	}
+	for p, content := range b.files {
+		if err := writeFileIfChanged(p, content); err != nil {
+			return nil, fmt.Errorf("rclone: %w", err)
+		}
+	}
 	group := "run/" + s.RunID
 	b.in["_group"] = group
 	e.Client.logs.register(group, sink)
@@ -210,7 +246,7 @@ func (e *Engine) Start(_ context.Context, s engine.Spec, sink engine.Sink) (engi
 		return nil, err
 	}
 	x := &execution{c: e.Client, jobID: jobID, group: group, sink: sink, done: make(chan struct{}),
-		poll: e.PollInterval, stopTimeout: e.StopTimeout}
+		poll: e.PollInterval, stopTimeout: e.StopTimeout, bisync: s.Mode == engine.ModeBisync}
 	if x.poll <= 0 {
 		x.poll = time.Second
 	}
@@ -230,6 +266,7 @@ type execution struct {
 	sink        engine.Sink
 	poll        time.Duration
 	stopTimeout time.Duration
+	bisync      bool
 
 	mu        sync.Mutex
 	progress  engine.Progress
@@ -340,6 +377,12 @@ func (x *execution) run() {
 	x.mu.Lock()
 	cancelled := x.cancelled
 	x.mu.Unlock()
+	if x.bisync {
+		for _, l := range bisyncOutputLines(js.Output) {
+			l.Time, l.Msg = time.Now(), Redact(l.Msg)
+			x.sink.OnLog(l)
+		}
+	}
 	res := engine.Result{Final: final}
 	switch {
 	case cancelled:
@@ -353,6 +396,13 @@ func (x *execution) run() {
 		res.Outcome = engine.OutcomeFailed
 		res.Err = fmt.Errorf("%s", Redact(firstNonEmpty(js.Error, st.LastError, "rclone job failed")))
 		res.Retryable = !st.FatalError
+		if x.bisync && bisyncNeedsResync(js.Error+"\n"+outputText(js.Output)) {
+			// Relancer à l'identique échouerait de nouveau : seul un resync,
+			// décidé par un humain, peut débloquer la situation.
+			res.Retryable = false
+			x.sink.OnLog(engine.LogLine{Time: time.Now(), Stream: "system", Level: engine.LevelError,
+				Msg: "bisync needs a resync: run the job again with the resync option (it never deletes files)"})
+		}
 	}
 	x.finish(res)
 }
@@ -362,6 +412,12 @@ func (x *execution) finish(r engine.Result) {
 	x.result = r
 	x.mu.Unlock()
 	x.sink.OnProgress(r.Final)
+}
+
+// within indique si child est strictement sous parent (chemins locaux résolus).
+func within(child, parent string) bool {
+	sep := string(filepath.Separator)
+	return strings.HasPrefix(child, strings.TrimSuffix(parent, sep)+sep)
 }
 
 func firstNonEmpty(v ...string) string {

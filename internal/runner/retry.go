@@ -42,7 +42,7 @@ func (m *Manager) scheduleRetry(ar *activeRun) *time.Time {
 		return nil
 	}
 	m.clearRetryLocked(jid)
-	p := &pendingRetry{at: at}
+	p := &pendingRetry{at: at, resync: ar.spec.Resync}
 	p.timer = time.AfterFunc(delay, func() { m.fireRetry(jid, next, p) })
 	m.retries[jid] = p
 	m.d.Log.Info("automatic retry scheduled", "job", j.Name, "attempt", next, "of", j.RetryMax+1, "at", at.Format(time.RFC3339))
@@ -64,7 +64,9 @@ func (m *Manager) fireRetry(jobID int64, attempt int, p *pendingRetry) {
 		m.d.Log.Warn("automatic retry: job unavailable", "job", jobID, "err", err)
 		return
 	}
-	if _, err := m.submitSnapshot(ctx, SnapshotOf(j), store.TriggerRetry, nil, false, attempt); err != nil {
+	snap := SnapshotOf(j)
+	snap.Resync = p.resync // la relance d'un resync reste un resync
+	if _, err := m.submitSnapshot(ctx, snap, store.TriggerRetry, nil, false, attempt); err != nil {
 		m.d.Log.Warn("automatic retry not started", "job", j.Name, "attempt", attempt, "err", err)
 	}
 }

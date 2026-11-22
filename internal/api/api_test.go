@@ -30,7 +30,7 @@ type fakeEngine struct{ root string }
 
 type fakeOpts struct{}
 
-func (f *fakeEngine) Kind() engine.Kind                  { return engine.KindRsync }
+func (f *fakeEngine) Kind() engine.Kind                 { return engine.KindRsync }
 func (f *fakeEngine) DecodeOptions([]byte) (any, error) { return fakeOpts{}, nil }
 func (f *fakeEngine) Validate(_ context.Context, s engine.Spec) error {
 	ve := &engine.ValidationError{}
@@ -348,6 +348,22 @@ func TestAuthorization(t *testing.T) {
 	}
 	if code, _ := op.do("PUT", jp, job); code != 403 {
 		t.Errorf("op edits job with run grant: %d", code)
+	}
+	if code, _ := op.do("POST", jp+"/run", map[string]any{"resync": true}); code != 403 {
+		t.Errorf("op resyncs with run grant: %d", code)
+	}
+	if code, out := admin.do("POST", jp+"/run", map[string]any{"resync": true}); code != 400 {
+		t.Errorf("resync accepted on an rsync job: %d %v", code, out)
+	}
+	// Relancer un resync terminé exige aussi le droit edit.
+	snap, _ := json.Marshal(runner.SpecSnapshot{JobID: jobID, Name: "j", Engine: engine.KindRclone, Mode: engine.ModeBisync, Resync: true})
+	resyncRun := store.Run{ID: runner.NewID(time.Now()), JobID: &jobID, JobName: "j", Engine: "rclone", Trigger: store.TriggerManual,
+		State: store.StateSucceeded, SpecJSON: string(snap), QueuedAt: time.Now(), Attempt: 1}
+	if err := h.db.InsertRun(ctx, resyncRun); err != nil {
+		t.Fatal(err)
+	}
+	if code, _ := op.do("POST", "/api/v1/runs/"+resyncRun.ID+"/retry", nil); code != 403 {
+		t.Errorf("op retries a resync with run grant: %d", code)
 	}
 	if code, _ := op.do("DELETE", jp, nil); code != 403 {
 		t.Errorf("op deletes job: %d", code)

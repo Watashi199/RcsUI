@@ -59,6 +59,8 @@ type SpecSnapshot struct {
 	Source      engine.Endpoint `json:"source"`
 	Destination engine.Endpoint `json:"destination"`
 	Options     json.RawMessage `json:"options"`
+	// Resync (bisync) : demandé pour ce run uniquement, jamais stocké dans le job.
+	Resync bool `json:"resync,omitempty"`
 }
 
 // StateEvent est le contenu d'un événement run.state.
@@ -116,8 +118,9 @@ type Manager struct {
 }
 
 type pendingRetry struct {
-	timer *time.Timer
-	at    time.Time
+	timer  *time.Timer
+	at     time.Time
+	resync bool
 }
 
 // New crée un Manager.
@@ -162,12 +165,15 @@ func (m *Manager) BuildSpec(ctx context.Context, snap SpecSnapshot, runID string
 	if !ok {
 		return engine.Spec{}, nil, &engine.ValidationError{Fields: map[string]string{"engine": "unknown or unavailable engine"}}
 	}
+	if snap.Resync && snap.Mode != engine.ModeBisync {
+		return engine.Spec{}, nil, &engine.ValidationError{Fields: map[string]string{"resync": "only valid for bisync jobs"}}
+	}
 	opts, err := eng.DecodeOptions(snap.Options)
 	if err != nil {
 		return engine.Spec{}, nil, err
 	}
 	s := engine.Spec{RunID: runID, Kind: snap.Engine, Mode: snap.Mode, Source: snap.Source,
-		Destination: snap.Destination, DryRun: dryRun, Options: opts}
+		Destination: snap.Destination, DryRun: dryRun, Resync: snap.Resync, Options: opts}
 	if err := eng.Validate(ctx, s); err != nil {
 		return engine.Spec{}, nil, err
 	}
@@ -182,11 +188,25 @@ func SnapshotOf(j store.Job) SpecSnapshot {
 
 // Submit met en file un run pour un job.
 func (m *Manager) Submit(ctx context.Context, jobID int64, trig store.Trigger, by *int64, dryRun bool) (string, error) {
+	return m.SubmitWith(ctx, jobID, trig, by, RunOptions{DryRun: dryRun})
+}
+
+// RunOptions sont les réglages propres à un run (non stockés dans le job).
+type RunOptions struct {
+	DryRun bool
+	// Resync : bisync uniquement (refusé par le moteur sinon).
+	Resync bool
+}
+
+// SubmitWith met en file un run pour un job avec des options de run.
+func (m *Manager) SubmitWith(ctx context.Context, jobID int64, trig store.Trigger, by *int64, o RunOptions) (string, error) {
 	j, err := m.d.DB.GetJob(ctx, jobID)
 	if err != nil {
 		return "", err
 	}
-	return m.submitSnapshot(ctx, SnapshotOf(j), trig, by, dryRun, 1)
+	snap := SnapshotOf(j)
+	snap.Resync = o.Resync
+	return m.submitSnapshot(ctx, snap, trig, by, o.DryRun, 1)
 }
 
 // Retry relance un run terminé avec la même spec.

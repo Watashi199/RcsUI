@@ -330,12 +330,16 @@ func (s *Server) handleDeleteJob(w http.ResponseWriter, r *http.Request, cur *au
 }
 
 func (s *Server) handleRunJob(w http.ResponseWriter, r *http.Request, cur *auth.Current) {
-	j, _, ok := s.loadJob(w, r, cur, store.PermRun)
+	j, p, ok := s.loadJob(w, r, cur, store.PermRun)
 	if !ok {
 		return
 	}
 	var in struct {
 		DryRun bool `json:"dryRun"`
+		// Resync (bisync) : reconstruit les listings de référence. Il peut
+		// faire réapparaître des fichiers supprimés d'un côté : réservé aux
+		// utilisateurs qui peuvent modifier le job.
+		Resync bool `json:"resync"`
 	}
 	if r.ContentLength != 0 {
 		if err := decode(r, &in); err != nil {
@@ -343,13 +347,18 @@ func (s *Server) handleRunJob(w http.ResponseWriter, r *http.Request, cur *auth.
 			return
 		}
 	}
+	if in.Resync && !authz.Allows(p, store.PermEdit) {
+		writeError(w, http.StatusForbidden, "forbidden", "resync requires the edit permission on this job")
+		return
+	}
 	uid := cur.User.ID
-	id, err := s.Runner.Submit(r.Context(), j.ID, store.TriggerManual, &uid, in.DryRun)
+	id, err := s.Runner.SubmitWith(r.Context(), j.ID, store.TriggerManual, &uid,
+		runner.RunOptions{DryRun: in.DryRun, Resync: in.Resync})
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	s.audit(r, cur, "run.start", "job:"+j.Name, map[string]any{"run": id, "dryRun": in.DryRun})
+	s.audit(r, cur, "run.start", "job:"+j.Name, map[string]any{"run": id, "dryRun": in.DryRun, "resync": in.Resync})
 	writeJSON(w, http.StatusAccepted, map[string]string{"runId": id})
 }
 
