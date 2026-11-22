@@ -21,7 +21,7 @@
 1. **RBAC** : rôles `admin` / `operator` / `viewer`, plus des droits par job (`view` < `run` < `edit`) et par remote (`use`).
 2. **Auth** : locale (argon2id) **+ OIDC** optionnel, derrière un reverse proxy qui termine le TLS.
 3. **SSH** : deux modes. Clés **gérées par l'app** (générées ou importées, chiffrées au repos, known_hosts enrôlés en TOFU) **et/ou** un **`~/.ssh` monté** en lecture seule.
-4. **Runtime** : conteneur **non-root** (PUID/PGID). `rclone.conf` **exclusif à l'app** sur le volume, non chiffré, en 0600.
+4. **Runtime** : conteneur **non-root** (PUID/PGID). `rclone.conf` **exclusif à l'app** sur le volume, en 0600, chiffré depuis M10 (mot de passe dérivé de la clé maître).
 
 **Routage HTTP : stdlib `net/http`, sans `chi`.** Le `ServeMux` de Go 1.22+ gère méthode, wildcards `{id}` et `PathValue`, et Go fournit `http.CrossOriginProtection`. `chi` n'apporterait que le chaînage de middlewares, qu'une fonction `chain(h, mws...)` de 10 lignes remplace.
 
@@ -1120,7 +1120,8 @@ Complexité : **S** ≈ 2–4 j, **M** ≈ 1–2 sem., **L** ≈ 2–4 sem., pou
 5. **Attribution des logs rclone par run** : incertaine pour les logs des backends (§6.3). Repli : `core/transferred` (100 derniers) et `lastError`.
 6. **Bande passante rclone par job.** `BwLimit` repose probablement sur un token bucket **global**, donc un `_config.BwLimit` par appel pourrait être ignoré ou s'appliquer à tous les jobs. À vérifier en M0 ; sinon, limite globale uniquement, réglée dans les settings via `core/bwlimit`.
 7. **Secrets rclone obscurcis, pas chiffrés.** C'est le choix « conf exclusive non chiffrée », atténué par le mode 0600 et le masquage API.
-   *Évolution* : chiffrement de la config rclone avec un mot de passe dérivé de la clé maître.
+   *Évolution* : chiffrement de la config rclone avec un mot de passe dérivé de la clé maître. **Fait en M10**
+   (docs/roadmap.md) : `rclone.conf` chiffré par défaut, mot de passe HKDF de la clé maître.
 8. **`robfig/cron/v3` inactif depuis 2021.** Le code est petit et stable, mais il n'y aura pas de correctifs. Il est encapsulé derrière `scheduler.Scheduler` et remplaçable par `go-co-op/gocron/v2` sans impact ailleurs. Nuance : la doc pkg.go.dev et le README divergent sur la récupération des panics par défaut, donc on ajoute explicitement `cron.WithChain(cron.Recover(logger))`. *Réévalué le 2026-11-22* : `gocron/v2` dépend lui-même de `robfig/cron/v3` pour l'analyse des expressions ; on garde robfig (docs/roadmap.md, M9.3).
 9. **Non-root.** Owner et group ne sont pas préservés, et des fichiers d'autres utilisateurs du NAS peuvent être illisibles (code 23).
    *Atténuations* : `--fake-super` ; documentation de PUID/PGID.

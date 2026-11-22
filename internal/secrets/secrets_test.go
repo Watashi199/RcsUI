@@ -60,3 +60,20 @@ func TestLoadOrCreate(t *testing.T) {
 		t.Error("short provided key accepted")
 	}
 }
+
+func TestDerive(t *testing.T) {
+	master := make([]byte, 32)
+	a1, _ := Derive(master, "a")
+	a2, _ := Derive(master, "a")
+	b, _ := Derive(master, "b")
+	if len(a1) != 32 || string(a1) != string(a2) || string(a1) == string(b) {
+		t.Fatal("derive must be deterministic and purpose-specific")
+	}
+	p1, err := RcloneConfigPassword(master)
+	other := make([]byte, 32)
+	other[0] = 1
+	p2, _ := RcloneConfigPassword(other)
+	if err != nil || len(p1) < 40 || p1 == p2 {
+		t.Fatalf("rclone password: %q %q %v", p1, p2, err)
+	}
+}

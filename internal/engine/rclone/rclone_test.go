@@ -25,7 +25,9 @@ func client(t *testing.T) *Client {
 	t.Helper()
 	tOnce.Do(func() {
 		dir, _ := os.MkdirTemp("", "rcsui-rclone-test")
-		tClient, tErr = Init(filepath.Join(dir, "rclone.conf"), filepath.Join(dir, "cache"))
+		// Configuration chiffrée : toute la suite tourne comme en production (M10).
+		tClient, tErr = Init(filepath.Join(dir, "rclone.conf"), filepath.Join(dir, "cache"),
+			ConfigCrypt{Password: "test-password", Encrypt: true, BackupDir: filepath.Join(dir, "backups")})
 		if tErr == nil {
 			_, tErr = tClient.CreateRemote("mem", "memory", map[string]any{}, RemoteValidator{})
 		}

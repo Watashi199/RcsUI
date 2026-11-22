@@ -69,7 +69,8 @@ vérification dans [docs/release.md](docs/release.md).
 | `RCSUI_COOKIE_SECURE` | `auto` | `auto` \| `true` \| `false` |
 | `RCSUI_LOG_LEVEL`, `RCSUI_LOG_RETENTION_DAYS` | `info`, `90` | |
 | `RCSUI_DISABLE_RCLONE` | `false` | Désactive le moteur rclone |
-| `RCSUI_SECRET_KEY(_FILE)` | généré dans `/data/secret.key` | Clé maître AES-256 (base64, 32 octets) chiffrant les clés SSH. **À sauvegarder** : sans elle, les identités SSH sont perdues. |
+| `RCSUI_RCLONE_CONFIG_ENCRYPT` | `true` | Chiffre `rclone.conf` avec une clé dérivée de la clé maître ; `false` le remet en clair au démarrage (retour arrière) |
+| `RCSUI_SECRET_KEY(_FILE)` | généré dans `/data/secret.key` | Clé maître (base64, 32 octets) chiffrant les clés SSH et la configuration rclone. **À sauvegarder** : sans elle, les identités SSH **et les remotes rclone** sont perdus. |
 | `RCSUI_SSH_DIR` | — | `~/.ssh` monté en lecture seule (le dossier doit s'appeler `.ssh`) ; utilisable par les admins |
 | `RCSUI_OIDC_ISSUER`, `RCSUI_OIDC_CLIENT_ID`, `RCSUI_OIDC_CLIENT_SECRET(_FILE)` | — | Active OIDC (nécessite `RCSUI_BASE_URL` ; redirect : `<BASE_URL>/api/v1/auth/oidc/callback`) |
 | `RCSUI_OIDC_SCOPES`, `RCSUI_OIDC_USERNAME_CLAIM`, `RCSUI_OIDC_ROLE_CLAIM` | `openid,profile,email,groups`, `preferred_username`, `groups` | |
@@ -77,6 +78,21 @@ vérification dans [docs/release.md](docs/release.md).
 | `RCSUI_OIDC_AUTO_PROVISION` | `false` | Crée le compte au premier login (rôle `viewer` hors groupes) ; sinon un admin doit créer le compte au préalable |
 | `RCSUI_METRICS_TOKEN(_FILE)` | — | Active `GET /metrics` (Prometheus), protégé par ce jeton bearer (16 caractères minimum) |
 | `PUID`, `PGID`, `TZ` | `1000`, `1000` | Utilisateur du conteneur (jamais root) |
+
+### Configuration rclone chiffrée
+
+`/data/rclone/rclone.conf` est chiffré avec le mécanisme natif de rclone (`RCLONE_ENCRYPT_V0`, NaCl secretbox). Le
+mot de passe est dérivé de la clé maître par HKDF-SHA256 : il n'y a rien de plus à sauvegarder que la clé maître.
+
+- **Mise à jour depuis une version antérieure** : au premier démarrage, la configuration en clair est chiffrée et une
+  copie est laissée dans `/data/backups/rclone.conf.<date>.plain.bak`. Elle contient les secrets (simplement
+  obscurcis) : supprimez-la une fois les remotes vérifiés.
+- **Clé maître changée ou perdue** : le serveur refuse de démarrer (« rclone.conf is encrypted with another key »).
+  Remettez l'ancienne clé ; sans elle, les remotes sont à recréer.
+- **Utiliser la CLI rclone sur ce fichier** :
+  `RCLONE_CONFIG_PASS="$(docker exec rcsui rcsui rclone-config-password)" rclone --config rclone.conf listremotes`.
+- **Retour arrière** : redémarrer avec `RCSUI_RCLONE_CONFIG_ENCRYPT=false` remet le fichier en clair (copie chiffrée
+  dans `/data/backups`). Le retour arrière vers une version antérieure de RcsUI exige cette étape d'abord.
 
 ## Développement
 

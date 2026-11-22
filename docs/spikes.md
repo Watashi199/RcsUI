@@ -81,6 +81,18 @@ Tous les packages passent, **sauf `internal/engine/rclone`** : data race **dans 
 avec `StatsInfo.Error()`). Déclenchée par tout appel `core/stats` pendant un transfert en erreur. Notre code n'y est
 pour rien ; signalé en amont : [rclone#10424](https://github.com/rclone/rclone/issues/10424). La CI exécute ce package sans `-race`.
 
+## Config rclone chiffrée (M10, rclone v1.76.0, 2026-11-22)
+
+- `config.SetConfigPassword` posé **avant** le premier usage de la configuration (librclone la charge à la première
+  RPC, pas dans `Initialize`) suffit : `config/*` lit et écrit le fichier chiffré sans invite.
+  `AskPassword=false` est indispensable, sinon une mauvaise clé déclenche une invite sur le terminal.
+- Mauvaise clé : `config.Decrypt` échoue (et efface la clé) ; sans vérification préalable, chaque RPC `config/*`
+  paniquerait (récupéré par rc, statut 500). RcsUI vérifie donc la clé au démarrage et refuse de démarrer.
+- Conversion : `config.LoadedData().Save()` écrit chiffré si une clé est posée, en clair après
+  `ClearConfigPassword` ; écriture atomique (fichier temporaire puis renommage).
+- OAuth : le rafraîchissement d'un token passe par `configmap.Mapper.Set` → `SaveConfig`, qui chiffre avec la même
+  clé globale. Aucune écriture en clair possible tant que la clé est posée.
+
 ## Non vérifié
 
 - ~~Fixtures rsync 3.4.x~~ : capturées le 2026-11-22 avec rsync 3.4.3 (`alpine:3.20`, utilisateur non-root). Même
