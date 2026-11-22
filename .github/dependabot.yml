@@ -1,12 +1,14 @@
 # Mises à jour des dépendances (PLAN.md §8, n° 16 ; docs/roadmap.md, M8).
 # Dependabot plutôt que Renovate : intégré à GitHub, aucune application à installer.
 # cooldown : on laisse 14 jours à une version avant de l'adopter (retraits, compromissions).
+# Mensuel, une PR regroupée par écosystème, pour limiter le bruit (notifications) ;
+# les alertes de sécurité Dependabot restent immédiates, hors de ce calendrier.
 version: 2
 updates:
   - package-ecosystem: gomod
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     cooldown:
       default-days: 14
     groups:
@@ -18,7 +20,7 @@ updates:
   - package-ecosystem: npm
     directories: [/web, /e2e]
     schedule:
-      interval: weekly
+      interval: monthly
     cooldown:
       default-days: 14
     groups:
@@ -37,7 +39,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     cooldown:
       default-days: 14
     groups:
@@ -54,7 +56,7 @@ updates:
   - package-ecosystem: docker
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     cooldown:
       default-days: 14
     groups:
