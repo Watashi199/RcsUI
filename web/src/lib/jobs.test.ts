@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { duplicateInput, jobToInput } from './jobs.ts';
+import { duplicateInput, jobToInput, truncateBytes } from './jobs.ts';
 import type { Job } from './types.ts';
 
 const job: Job = {
@@ -32,13 +32,21 @@ describe('jobs', () => {
 	});
 
 	it('duplicates with a new name and the schedule disabled, without aliasing', () => {
-		const d = duplicateInput(job, 'photos (copy)');
+		const copy = (n: string) => `${n} (copy)`;
+		const d = duplicateInput(job, copy);
 		expect(d.name).toBe('photos (copy)');
 		expect(d.schedule).toEqual({ cron: '0 3 * * *', enabled: false });
 		(d.options.excludes as string[]).push('*.bak');
 		d.source.path = '/other';
 		expect(job.options.excludes).toEqual(['*.tmp']);
 		expect(job.source.path).toBe('/src');
-		expect(duplicateInput(job, 'x'.repeat(150)).name).toHaveLength(100);
+		// Nom d'origine à la limite : le suffixe reste, le total tient en 100 octets UTF-8.
+		const long = duplicateInput({ ...job, name: 'x'.repeat(100) }, copy).name;
+		expect(long.endsWith(' (copy)')).toBe(true);
+		expect(long).toHaveLength(100);
+		const accents = duplicateInput({ ...job, name: 'é'.repeat(50) }, copy).name;
+		expect(accents.endsWith(' (copy)')).toBe(true);
+		expect(new TextEncoder().encode(accents).length).toBeLessThanOrEqual(100);
+		expect(truncateBytes('aé', 2)).toBe('a');
 	});
 });

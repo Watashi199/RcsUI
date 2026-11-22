@@ -32,7 +32,7 @@
 		get<Job>('/jobs/' + encodeURIComponent(from))
 			.then((j) => {
 				sourceName = j.name;
-				initial = duplicateInput(j, t('jobs.duplicate.name', { name: j.name }));
+				initial = duplicateInput(j, (name) => t('jobs.duplicate.name', { name }));
 			})
 			.catch((e) => (error = errorMessage(e)));
 	}

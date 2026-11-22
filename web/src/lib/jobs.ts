@@ -19,10 +19,30 @@ export function jobToInput(j: Job): JobInput {
 	};
 }
 
-/** Copie d'un job : nouveau nom, planification conservée mais désactivée. */
-export function duplicateInput(j: Job, name: string): JobInput {
+/** Longueur maximale d'un nom de job côté serveur, en octets UTF-8. */
+export const MAX_NAME_BYTES = 100;
+
+const utf8Len = (s: string) => new TextEncoder().encode(s).length;
+
+/** Tronque s à max octets UTF-8 sans couper un caractère. */
+export function truncateBytes(s: string, max: number): string {
+	let out = '';
+	for (const ch of s) {
+		if (utf8Len(out + ch) > max) break;
+		out += ch;
+	}
+	return out;
+}
+
+/**
+ * Copie d'un job : nom produit par copyName (ex. « {nom} (copie) »), dont le
+ * suffixe est toujours conservé en tronquant le nom d'origine ; planification
+ * conservée mais désactivée.
+ */
+export function duplicateInput(j: Job, copyName: (base: string) => string): JobInput {
 	const input = structuredClone(jobToInput(j));
-	input.name = name.slice(0, 100);
+	const room = MAX_NAME_BYTES - utf8Len(copyName(''));
+	input.name = copyName(truncateBytes(j.name, Math.max(0, room)).trimEnd());
 	if (input.schedule) input.schedule.enabled = false;
 	return input;
 }
