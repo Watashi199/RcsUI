@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"rcsui/internal/engine"
@@ -11,8 +12,11 @@ import (
 // Relances automatiques (PLAN.md §11, M7) : un run réel qui échoue avec
 // Result.Retryable (erreur réseau/protocole rsync, erreur non fatale rclone) est
 // relancé après job.RetryDelaySec, tant que attempt <= job.RetryMax. La
-// relance relit la définition courante du job. Les timers vivent en mémoire :
-// un redémarrage les perd (retry_interrupted couvre le cas des runs coupés).
+// relance relit la définition courante du job.
+//
+// Depuis M9.1, la relance est aussi écrite dans pending_retries : elle survit à
+// un redémarrage (RestoreRetries). Un nouveau run du job (manuel, planifié ou la
+// relance elle-même) la remplace, en mémoire comme en base.
 
 // retryUnit convertit RetryDelaySec en durée (remplaçable dans les tests).
 func (m *Manager) retryUnit() time.Duration {
@@ -22,31 +26,69 @@ func (m *Manager) retryUnit() time.Duration {
 	return time.Second
 }
 
-// scheduleRetry programme une relance si le job l'autorise. Retourne l'heure prévue.
-func (m *Manager) scheduleRetry(ar *activeRun) *time.Time {
+// planRetry décide si un run en échec doit être relancé et enregistre la
+// relance en base. Appelé hors verrou, AVANT la transition finale : le run est
+// encore actif, aucun autre run du job ne peut démarrer entre-temps.
+func (m *Manager) planRetry(ar *activeRun) *store.PendingRetry {
 	if ar.run.DryRun {
 		return nil
 	}
-	j, err := m.d.DB.GetJob(context.Background(), ar.jobID)
+	ctx := context.Background()
+	j, err := m.d.DB.GetJob(ctx, ar.jobID)
 	if err != nil || j.RetryMax < ar.attempt {
 		return nil
 	}
 	delay := time.Duration(max(j.RetryDelaySec, 1)) * m.retryUnit()
-	next := ar.attempt + 1
-	jid := ar.jobID
-	at := time.Now().Add(delay)
+	p := &store.PendingRetry{JobID: j.ID, At: time.Now().Add(delay), Attempt: ar.attempt + 1, Resync: ar.spec.Resync}
+	if err := m.d.DB.SavePendingRetry(ctx, *p); err != nil {
+		// La relance reste programmée en mémoire ; seul le redémarrage la perdrait.
+		m.d.Log.Error("persist pending retry", "job", j.Name, "err", err)
+	}
+	m.d.Log.Info("automatic retry scheduled", "job", j.Name, "attempt", p.Attempt, "of", j.RetryMax+1, "at", p.At.Format(time.RFC3339))
+	return p
+}
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
+// armRetryLocked programme le timer d'une relance. Appelé sous m.mu, dans la
+// même section critique que la libération du run (finish) : un lancement
+// manuel voit soit le run actif (409), soit la relance (qu'il remplace).
+// Pendant l'arrêt, rien n'est armé : la relance reste en base pour le prochain démarrage.
+func (m *Manager) armRetryLocked(p store.PendingRetry) *time.Time {
 	if m.closing {
 		return nil
 	}
-	m.clearRetryLocked(jid)
-	p := &pendingRetry{at: at, resync: ar.spec.Resync}
-	p.timer = time.AfterFunc(delay, func() { m.fireRetry(jid, next, p) })
-	m.retries[jid] = p
-	m.d.Log.Info("automatic retry scheduled", "job", j.Name, "attempt", next, "of", j.RetryMax+1, "at", at.Format(time.RFC3339))
+	m.stopRetryLocked(p.JobID)
+	pr := &pendingRetry{at: p.At, resync: p.Resync}
+	jid, attempt := p.JobID, p.Attempt
+	pr.timer = time.AfterFunc(max(time.Until(p.At), 0), func() { m.fireRetry(jid, attempt, pr) })
+	m.retries[jid] = pr
+	at := p.At
 	return &at
+}
+
+// RestoreRetries réarme les relances enregistrées avant un redémarrage. À appeler
+// après Recover : un job relancé par retry_interrupted n'a plus de relance en attente.
+// Une relance dont l'heure est passée part immédiatement.
+func (m *Manager) RestoreRetries(ctx context.Context) (int, error) {
+	list, err := m.d.DB.ListPendingRetries(ctx)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, p := range list {
+		if _, err := m.d.DB.GetJob(ctx, p.JobID); err != nil {
+			m.d.Log.Warn("pending retry dropped: job unavailable", "job", p.JobID, "err", err)
+			_ = m.d.DB.DeletePendingRetry(ctx, p.JobID)
+			continue
+		}
+		m.mu.Lock()
+		if _, busy := m.byJob[p.JobID]; busy {
+			m.clearRetryLocked(p.JobID)
+		} else if m.armRetryLocked(p) != nil {
+			n++
+		}
+		m.mu.Unlock()
+	}
+	return n, nil
 }
 
 func (m *Manager) fireRetry(jobID int64, attempt int, p *pendingRetry) {
@@ -58,24 +100,53 @@ func (m *Manager) fireRetry(jobID int64, attempt int, p *pendingRetry) {
 	delete(m.retries, jobID)
 	m.mu.Unlock()
 
+	// La ligne pending_retries n'est supprimée qu'avec l'insertion du run qui la
+	// remplace (submitSnapshot → clearRetryLocked, sous m.mu), ou si la relance
+	// est définitivement impossible. Un arrêt entre-temps la conserve.
 	ctx := context.Background()
 	j, err := m.d.DB.GetJob(ctx, jobID)
 	if err != nil {
 		m.d.Log.Warn("automatic retry: job unavailable", "job", jobID, "err", err)
+		m.dropPersistedRetry(ctx, jobID)
 		return
 	}
 	snap := SnapshotOf(j)
 	snap.Resync = p.resync // la relance d'un resync reste un resync
 	if _, err := m.submitSnapshot(ctx, snap, store.TriggerRetry, nil, false, attempt); err != nil {
+		if errors.Is(err, ErrShuttingDown) {
+			return // conservée pour le prochain démarrage
+		}
 		m.d.Log.Warn("automatic retry not started", "job", j.Name, "attempt", attempt, "err", err)
+		m.dropPersistedRetry(ctx, jobID)
 	}
 }
 
-// clearRetryLocked annule la relance en attente d'un job. Appelé sous m.mu.
-func (m *Manager) clearRetryLocked(jobID int64) {
+// dropPersistedRetry supprime une relance devenue impossible, sauf si une autre
+// a été programmée entre-temps pour ce job.
+func (m *Manager) dropPersistedRetry(ctx context.Context, jobID int64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, rearmed := m.retries[jobID]; rearmed || m.closing {
+		return
+	}
+	if err := m.d.DB.DeletePendingRetry(ctx, jobID); err != nil {
+		m.d.Log.Error("delete pending retry", "job", jobID, "err", err)
+	}
+}
+
+// stopRetryLocked arrête le timer d'une relance sans toucher à la base. Appelé sous m.mu.
+func (m *Manager) stopRetryLocked(jobID int64) {
 	if p, ok := m.retries[jobID]; ok {
 		p.timer.Stop()
 		delete(m.retries, jobID)
+	}
+}
+
+// clearRetryLocked annule la relance en attente d'un job, en mémoire et en base. Appelé sous m.mu.
+func (m *Manager) clearRetryLocked(jobID int64) {
+	m.stopRetryLocked(jobID)
+	if err := m.d.DB.DeletePendingRetry(context.Background(), jobID); err != nil {
+		m.d.Log.Error("delete pending retry", "job", jobID, "err", err)
 	}
 }
 
