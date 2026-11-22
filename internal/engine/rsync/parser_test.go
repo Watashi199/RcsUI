@@ -229,7 +229,7 @@ func FuzzParseLine(f *testing.F) {
 }
 
 // Fixtures capturées avec plusieurs versions de rsync (spikes/rsync/capture.sh).
-var fixtureVersions = []string{"3.2.7", "3.5.2"}
+var fixtureVersions = []string{"3.2.7", "3.4.3", "3.5.2"}
 
 func TestFixtures(t *testing.T) {
 	for _, v := range fixtureVersions {
