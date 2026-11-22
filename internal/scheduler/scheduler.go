@@ -11,6 +11,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 
+	"rcsui/internal/runner"
 	"rcsui/internal/store"
 )
 
@@ -235,8 +236,14 @@ func (s *Scheduler) fire(jobID int64) {
 		return
 	}
 	if _, err := s.runner.Submit(ctx, jobID, store.TriggerSchedule, nil, false); err != nil {
-		s.log.Error("scheduled submit failed", "job", j.Name, "err", err)
-		if err2 := s.runner.RecordSkipped(ctx, j, "could not start: "+err.Error()); err2 != nil {
+		reason := "could not start: " + err.Error()
+		if errors.Is(err, runner.ErrDestinationBusy) {
+			reason = err.Error() // attendu : option « destination exclusive » du job
+			s.log.Info("scheduled run skipped", "job", j.Name, "reason", reason)
+		} else {
+			s.log.Error("scheduled submit failed", "job", j.Name, "err", err)
+		}
+		if err2 := s.runner.RecordSkipped(ctx, j, reason); err2 != nil {
 			s.log.Error("record skipped run", "job", j.Name, "err", err2)
 		}
 	}

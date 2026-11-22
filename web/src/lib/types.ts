@@ -104,6 +104,7 @@ export interface Job {
 	retryMax: number;
 	retryDelaySec: number;
 	catchUp: boolean;
+	exclusiveDestination: boolean;
 	ownerId?: number;
 	createdAt: string;
 	updatedAt: string;
@@ -126,6 +127,7 @@ export interface JobInput {
 	retryMax: number;
 	retryDelaySec: number;
 	catchUp: boolean;
+	exclusiveDestination: boolean;
 }
 
 export interface LogRecord {

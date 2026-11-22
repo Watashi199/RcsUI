@@ -61,6 +61,8 @@ type SpecSnapshot struct {
 	Options     json.RawMessage `json:"options"`
 	// Resync (bisync) : demandé pour ce run uniquement, jamais stocké dans le job.
 	Resync bool `json:"resync,omitempty"`
+	// ExclusiveDest : ne pas démarrer si un autre job actif écrit au même endroit.
+	ExclusiveDest bool `json:"exclusiveDestination,omitempty"`
 }
 
 // StateEvent est le contenu d'un événement run.state.
@@ -89,6 +91,7 @@ type ProgressEvent struct {
 type activeRun struct {
 	run       store.Run
 	spec      engine.Spec
+	writes    []place // emplacements écrits, résolus (destination exclusive)
 	jobID     int64
 	attempt   int
 	state     store.RunState
@@ -183,7 +186,7 @@ func (m *Manager) BuildSpec(ctx context.Context, snap SpecSnapshot, runID string
 // SnapshotOf convertit un job en snapshot.
 func SnapshotOf(j store.Job) SpecSnapshot {
 	return SpecSnapshot{JobID: j.ID, Name: j.Name, Engine: j.Engine, Mode: j.Mode, Source: j.Source,
-		Destination: j.Destination, Options: j.Options}
+		Destination: j.Destination, Options: j.Options, ExclusiveDest: j.ExclusiveDest}
 }
 
 // Submit met en file un run pour un job.
@@ -237,6 +240,7 @@ func (m *Manager) submitSnapshot(ctx context.Context, snap SpecSnapshot, trig st
 	}
 	raw, _ := json.Marshal(snap)
 	jid := snap.JobID
+	writes := writtenPlaces(spec) // hors verrou : accès disque
 	logRel, _ := LogPaths(id, now)
 	r := store.Run{ID: id, JobID: &jid, JobName: snap.Name, Engine: string(snap.Engine), Trigger: trig,
 		TriggeredBy: by, DryRun: dryRun, Attempt: attempt, State: store.StateQueued, SpecJSON: string(raw), QueuedAt: now, LogPath: logRel}
@@ -250,6 +254,12 @@ func (m *Manager) submitSnapshot(ctx context.Context, snap SpecSnapshot, trig st
 		m.mu.Unlock()
 		return "", ErrJobActive
 	}
+	if snap.ExclusiveDest {
+		if err := m.destinationBusyLocked(jid, writes); err != nil {
+			m.mu.Unlock()
+			return "", err
+		}
+	}
 	if err := m.d.DB.InsertRun(ctx, r); err != nil {
 		m.mu.Unlock()
 		if errors.Is(err, store.ErrConflict) {
@@ -257,7 +267,7 @@ func (m *Manager) submitSnapshot(ctx context.Context, snap SpecSnapshot, trig st
 		}
 		return "", err
 	}
-	ar := &activeRun{run: r, spec: spec, jobID: jid, attempt: attempt, state: store.StateQueued, done: make(chan struct{})}
+	ar := &activeRun{run: r, spec: spec, writes: writes, jobID: jid, attempt: attempt, state: store.StateQueued, done: make(chan struct{})}
 	m.active[id] = ar
 	m.byJob[jid] = ar
 	m.queue = append(m.queue, ar)
@@ -270,19 +280,24 @@ func (m *Manager) submitSnapshot(ctx context.Context, snap SpecSnapshot, trig st
 	return id, nil
 }
 
-// RecordSkipped enregistre un run "skipped" (planification sur un job déjà actif).
+// RecordSkipped enregistre un run "skipped" (planification sur un job déjà
+// actif, ou dont la destination est occupée).
 func (m *Manager) RecordSkipped(ctx context.Context, j store.Job, reason string) error {
+	return m.recordSkipped(ctx, SnapshotOf(j), store.TriggerSchedule, 1, reason)
+}
+
+func (m *Manager) recordSkipped(ctx context.Context, snap SpecSnapshot, trig store.Trigger, attempt int, reason string) error {
 	now := time.Now()
-	raw, _ := json.Marshal(SnapshotOf(j))
-	jid := j.ID
-	r := store.Run{ID: NewID(now), JobID: &jid, JobName: j.Name, Engine: string(j.Engine), Trigger: store.TriggerSchedule,
-		State: store.StateSkipped, Attempt: 1, SpecJSON: string(raw), QueuedAt: now, FinishedAt: &now, ErrorMessage: reason}
+	raw, _ := json.Marshal(snap)
+	jid := snap.JobID
+	r := store.Run{ID: NewID(now), JobID: &jid, JobName: snap.Name, Engine: string(snap.Engine), Trigger: trig,
+		State: store.StateSkipped, Attempt: attempt, SpecJSON: string(raw), QueuedAt: now, FinishedAt: &now, ErrorMessage: reason}
 	if err := m.d.DB.InsertRun(ctx, r); err != nil {
 		return err
 	}
 	m.runHooks(Finished{Run: r})
 	m.d.Broker.PublishRun(r.ID, jid, events.TypeRunState,
-		StateEvent{RunID: r.ID, JobID: jid, JobName: j.Name, To: store.StateSkipped, At: now, Error: reason}, true)
+		StateEvent{RunID: r.ID, JobID: jid, JobName: snap.Name, To: store.StateSkipped, At: now, Error: reason}, true)
 	m.d.Broker.EndRun(r.ID)
 	return nil
 }

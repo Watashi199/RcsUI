@@ -24,13 +24,15 @@ type Job struct {
 	RetryMax         int             `json:"retryMax"`
 	RetryDelaySec    int             `json:"retryDelaySec"`
 	CatchUp          bool            `json:"catchUp"`
-	OwnerID          *int64          `json:"ownerId,omitempty"`
-	CreatedAt        time.Time       `json:"createdAt"`
-	UpdatedAt        time.Time       `json:"updatedAt"`
+	// ExclusiveDest : ne pas démarrer si un autre job actif écrit au même endroit.
+	ExclusiveDest bool      `json:"exclusiveDestination"`
+	OwnerID       *int64    `json:"ownerId,omitempty"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
 const jobCols = `id, name, engine, mode, source_json, destination_json, options_json, COALESCE(schedule_cron,''),
-	schedule_on, retry_interrupted, retry_max, retry_delay_s, catch_up, owner_id, created_at, updated_at`
+	schedule_on, retry_interrupted, retry_max, retry_delay_s, catch_up, exclusive_dest, owner_id, created_at, updated_at`
 
 func scanJob(s scanner) (Job, error) {
 	var j Job
@@ -38,7 +40,7 @@ func scanJob(s scanner) (Job, error) {
 	var owner sql.NullInt64
 	var created, updated int64
 	if err := s.Scan(&j.ID, &j.Name, &j.Engine, &j.Mode, &src, &dst, &opts, &j.ScheduleCron, &j.ScheduleOn,
-		&j.RetryInterrupted, &j.RetryMax, &j.RetryDelaySec, &j.CatchUp, &owner, &created, &updated); err != nil {
+		&j.RetryInterrupted, &j.RetryMax, &j.RetryDelaySec, &j.CatchUp, &j.ExclusiveDest, &owner, &created, &updated); err != nil {
 		return Job{}, mapErr(err)
 	}
 	if err := json.Unmarshal([]byte(src), &j.Source); err != nil {
@@ -73,7 +75,7 @@ func jobArgs(j Job) ([]any, error) {
 		}
 	}
 	return []any{j.Name, j.Engine, j.Mode, string(src), string(dst), opts, sshID, nullStr(j.ScheduleCron),
-		b2i(j.ScheduleOn), b2i(j.RetryInterrupted), j.RetryMax, j.RetryDelaySec, b2i(j.CatchUp)}, nil
+		b2i(j.ScheduleOn), b2i(j.RetryInterrupted), j.RetryMax, j.RetryDelaySec, b2i(j.CatchUp), b2i(j.ExclusiveDest)}, nil
 }
 
 // CreateJob insère un job et retourne son id.
@@ -85,8 +87,8 @@ func (db *DB) CreateJob(ctx context.Context, j Job) (int64, error) {
 	t := now()
 	res, err := db.W.ExecContext(ctx, `INSERT INTO job_definitions(name, engine, mode, source_json, destination_json,
 		options_json, ssh_identity_id, schedule_cron, schedule_on, retry_interrupted, retry_max, retry_delay_s, catch_up,
-		owner_id, created_at, updated_at)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, append(args, nullInt(j.OwnerID), t, t)...)
+		exclusive_dest, owner_id, created_at, updated_at)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, append(args, nullInt(j.OwnerID), t, t)...)
 	if err != nil {
 		return 0, mapErr(err)
 	}
@@ -101,7 +103,7 @@ func (db *DB) UpdateJob(ctx context.Context, j Job) error {
 	}
 	return db.execOne(ctx, `UPDATE job_definitions SET name=?, engine=?, mode=?, source_json=?, destination_json=?,
 		options_json=?, ssh_identity_id=?, schedule_cron=?, schedule_on=?, retry_interrupted=?, retry_max=?, retry_delay_s=?,
-		catch_up=?, updated_at=? WHERE id=?`,
+		catch_up=?, exclusive_dest=?, updated_at=? WHERE id=?`,
 		append(args, now(), j.ID)...)
 }
 

@@ -45,6 +45,7 @@ export const fr = {
 	'jobs.detail.next': 'prochaine {when}',
 	'jobs.detail.manual': 'manuelle',
 	'jobs.detail.catchUp': 'rattrapage au démarrage',
+	'jobs.detail.exclusiveDestination': 'exclusive',
 	'jobs.detail.retries': 'Relances',
 	'jobs.detail.retries.one': "jusqu'à {n} relance, {delay} s d'intervalle",
 	'jobs.detail.retries.other': "jusqu'à {n} relances, {delay} s d'intervalle",
@@ -170,6 +171,9 @@ export const fr = {
 	'jobs.form.schedule.catchUp': 'Rattraper au démarrage une exécution manquée pendant un arrêt du serveur',
 	'jobs.form.schedule.next': 'Prochaines exécutions :',
 	'jobs.form.retryInterrupted': 'Relancer automatiquement si interrompu par un redémarrage',
+	'jobs.form.exclusiveDestination': 'Ne pas démarrer si un autre job écrit dans la même destination',
+	'jobs.form.exclusiveDestination.help':
+		'Une exécution planifiée ou une relance est alors marquée « Ignoré » ; un lancement manuel est refusé. Les dossiers imbriqués comptent comme la même destination.',
 	'jobs.form.retries': 'Relances automatiques',
 	'jobs.form.retries.help':
 		'Après un échec transitoire (réseau, protocole, erreur rclone non fatale), le job est relancé après le délai choisi. Les échecs de validation, les annulations et les dry-runs ne sont jamais relancés.',
@@ -219,6 +223,7 @@ export const en: Record<keyof typeof fr, string> = {
 	'jobs.detail.next': 'next {when}',
 	'jobs.detail.manual': 'manual',
 	'jobs.detail.catchUp': 'catch up at startup',
+	'jobs.detail.exclusiveDestination': 'exclusive',
 	'jobs.detail.retries': 'Retries',
 	'jobs.detail.retries.one': 'up to {n} retry, {delay} s apart',
 	'jobs.detail.retries.other': 'up to {n} retries, {delay} s apart',
@@ -343,6 +348,9 @@ export const en: Record<keyof typeof fr, string> = {
 	'jobs.form.schedule.catchUp': 'At startup, catch up on a run missed while the server was down',
 	'jobs.form.schedule.next': 'Next runs:',
 	'jobs.form.retryInterrupted': 'Automatically restart if interrupted by a reboot',
+	'jobs.form.exclusiveDestination': 'Do not start while another job writes to the same destination',
+	'jobs.form.exclusiveDestination.help':
+		'A scheduled run or a retry is then marked “Skipped”; a manual run is refused. Nested folders count as the same destination.',
 	'jobs.form.retries': 'Automatic retries',
 	'jobs.form.retries.help':
 		'After a transient failure (network, protocol, non-fatal rclone error), the job is retried after the chosen delay. Validation failures, cancellations and dry runs are never retried.',

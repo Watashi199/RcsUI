@@ -17,7 +17,8 @@
 		retryInterrupted: false,
 		retryMax: 0,
 		retryDelaySec: 300,
-		catchUp: false
+		catchUp: false,
+		exclusiveDestination: false
 	};
 
 	async function create(j: JobInput) {

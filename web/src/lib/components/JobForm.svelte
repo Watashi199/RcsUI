@@ -542,6 +542,11 @@
 			</div>
 		{/if}
 		<label class="check"><input type="checkbox" bind:checked={job.retryInterrupted} /> {t('jobs.form.retryInterrupted')}</label>
+		<label class="check">
+			<input type="checkbox" bind:checked={job.exclusiveDestination} />
+			{t('jobs.form.exclusiveDestination')}
+		</label>
+		<p class="small muted">{t('jobs.form.exclusiveDestination.help')}</p>
 	</div>
 
 	<div class="card">

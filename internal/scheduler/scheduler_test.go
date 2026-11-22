@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"rcsui/internal/runner"
 	"rcsui/internal/store"
 )
 
@@ -94,6 +95,18 @@ func TestFireSubmitSkip(t *testing.T) {
 		t.Errorf("submits=%v skips=%v", r.submits, r.skips)
 	}
 	s.fire(99) // job supprimé : pas de panique
+}
+
+// Destination occupée (option « destination exclusive ») : raison lisible.
+func TestFireDestinationBusy(t *testing.T) {
+	r := &fakeRunner{err: &runner.DestinationBusyError{JobName: "writer"}}
+	s := New(r, fakeJobs{1: {ID: 1, Name: "j"}}, time.UTC, nil)
+	s.fire(1)
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.skips) != 1 || r.skips[0] != `destination in use by job "writer"` {
+		t.Errorf("skips=%v", r.skips)
+	}
 }
 
 func TestSyncUpdatesAndRemoves(t *testing.T) {
