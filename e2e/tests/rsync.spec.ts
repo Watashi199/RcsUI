@@ -60,3 +60,26 @@ test('rsync job: a running transfer can be cancelled', async ({ page }) => {
 	await page.getByRole('button', { name: 'Cancel', exact: true }).click();
 	await expectRunState(page, 'Cancelled');
 });
+
+test('a job can be duplicated', async ({ page }) => {
+	const name = uniq('dup');
+	const src = dir(name + '/src');
+	const dst = dir(name + '/dst');
+
+	await asAdmin(page);
+	await page.goto('/jobs/new');
+	await page.getByLabel('Name').fill(name);
+	await page.getByLabel('Engine').selectOption('rsync');
+	const paths = page.getByLabel('Path', { exact: true });
+	await paths.nth(0).fill(src.inContainer);
+	await paths.nth(1).fill(dst.inContainer);
+	await page.getByRole('button', { name: 'Create job' }).click();
+	await expect(page.getByRole('heading', { name })).toBeVisible();
+
+	await page.getByRole('link', { name: 'Duplicate' }).click();
+	await expect(page.getByRole('heading', { name: `Duplicate “${name}”` })).toBeVisible();
+	await expect(page.getByLabel('Name')).toHaveValue(`${name} (copy)`);
+	await expect(page.getByLabel('Path', { exact: true }).nth(1)).toHaveValue(dst.inContainer);
+	await page.getByRole('button', { name: 'Create job' }).click();
+	await expect(page.getByRole('heading', { name: `${name} (copy)` })).toBeVisible();
+});

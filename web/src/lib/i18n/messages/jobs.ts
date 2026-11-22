@@ -25,6 +25,10 @@ export const fr = {
 	'jobs.new.noEngine': 'Aucun moteur disponible sur ce serveur.',
 	'jobs.new.submit': 'Créer le job',
 	'jobs.edit.title': 'Modifier le job',
+	'jobs.action.duplicate': 'Dupliquer',
+	'jobs.duplicate.title': 'Dupliquer « {name} »',
+	'jobs.duplicate.name': '{name} (copie)',
+	'jobs.duplicate.scheduleOff': 'La planification est reprise mais désactivée : activez-la une fois la copie vérifiée.',
 
 	// Détail
 	'jobs.detail.fallbackTitle': 'Job',
@@ -204,6 +208,10 @@ export const en: Record<keyof typeof fr, string> = {
 	'jobs.new.noEngine': 'No engine available on this server.',
 	'jobs.new.submit': 'Create job',
 	'jobs.edit.title': 'Edit job',
+	'jobs.action.duplicate': 'Duplicate',
+	'jobs.duplicate.title': 'Duplicate “{name}”',
+	'jobs.duplicate.name': '{name} (copy)',
+	'jobs.duplicate.scheduleOff': 'The schedule is copied but disabled: enable it once the copy is checked.',
 
 	'jobs.detail.fallbackTitle': 'Job',
 	'jobs.detail.resyncConfirm':

@@ -4,6 +4,7 @@
 	import { get, put, errorMessage } from '#lib/api.ts';
 	import type { Job, JobInput } from '#lib/types.ts';
 	import JobForm from '#lib/components/JobForm.svelte';
+	import { jobToInput } from '#lib/jobs.ts';
 	import { t } from '#lib/i18n/i18n.svelte.ts';
 
 	const id = $derived(page.params.id);
@@ -12,22 +13,7 @@
 
 	$effect(() => {
 		get<Job>('/jobs/' + id)
-			.then((j) => {
-				initial = {
-					name: j.name,
-					engine: j.engine,
-					mode: j.mode,
-					source: j.source,
-					destination: j.destination,
-					options: j.options ?? { v: 1 },
-					schedule: j.scheduleCron ? { cron: j.scheduleCron, enabled: j.scheduleEnabled } : null,
-					retryInterrupted: j.retryInterrupted,
-					retryMax: j.retryMax ?? 0,
-					retryDelaySec: j.retryDelaySec || 300,
-					catchUp: j.catchUp ?? false,
-					exclusiveDestination: j.exclusiveDestination ?? false
-				};
-			})
+			.then((j) => (initial = jobToInput(j)))
 			.catch((e) => (error = errorMessage(e)));
 	});
 

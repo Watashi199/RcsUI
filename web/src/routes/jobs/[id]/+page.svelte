@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { get, post, put, del, qs, errorMessage } from '#lib/api.ts';
 	import { live } from '#lib/live.svelte.ts';
-	import { isAdmin } from '#lib/session.svelte.ts';
+	import { canCreateJobs, isAdmin } from '#lib/session.svelte.ts';
 	import { bytes, between, dateTime, relative } from '#lib/format.ts';
 	import type { Endpoint, Job, Permission, Run, User } from '#lib/types.ts';
 	import StateBadge from '#lib/components/StateBadge.svelte';
@@ -123,6 +123,9 @@
 		{#if canEdit && job.mode === 'bisync'}
 			<button onclick={() => run(false, true)} disabled={job.active} title={t('jobs.detail.resyncTitle')}>{t('jobs.detail.resync')}</button>
 			<button onclick={() => run(true, true)} disabled={job.active}>{t('jobs.detail.resyncDry')}</button>
+		{/if}
+		{#if canCreateJobs()}
+			<a class="btn" href="/jobs/new?from={job.id}">{t('jobs.action.duplicate')}</a>
 		{/if}
 		{#if canEdit}
 			<a class="btn" href="/jobs/{job.id}/edit">{t('common.edit')}</a>
