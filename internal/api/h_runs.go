@@ -167,8 +167,15 @@ func (s *Server) handleCancelRun(w http.ResponseWriter, r *http.Request, cur *au
 }
 
 func (s *Server) handleRetryRun(w http.ResponseWriter, r *http.Request, cur *auth.Current) {
-	run, _, ok := s.loadRun(w, r, cur, store.PermRun)
+	run, p, ok := s.loadRun(w, r, cur, store.PermRun)
 	if !ok {
+		return
+	}
+	// Relancer un resync bisync revient à en lancer un : même droit (edit)
+	// que POST /jobs/{id}/run {"resync": true}.
+	var snap runner.SpecSnapshot
+	if err := json.Unmarshal([]byte(run.SpecJSON), &snap); err == nil && snap.Resync && !authz.Allows(p, store.PermEdit) {
+		writeError(w, http.StatusForbidden, "forbidden", "retrying a resync requires the edit permission on this job")
 		return
 	}
 	uid := cur.User.ID
