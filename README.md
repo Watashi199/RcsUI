@@ -95,6 +95,15 @@ mot de passe est dérivé de la clé maître par HKDF-SHA256 : il n'y a rien de 
 - **Retour arrière** : redémarrer avec `RCSUI_RCLONE_CONFIG_ENCRYPT=false` remet le fichier en clair (copie chiffrée
   dans `/data/backups`). Le retour arrière vers une version antérieure de RcsUI exige cette étape d'abord.
 
+### Export / import de la configuration
+
+Réglages → « Export / import de la configuration » (admin, session interactive uniquement) : un fichier chiffré par
+une phrase de passe (argon2id + AES-256-GCM, 12 caractères minimum) contenant jobs, remotes rclone, identités SSH (clés
+privées comprises), hôtes approuvés, réglages et notifications. Ni comptes, ni droits, ni jetons d'API. Le fichier ne
+dépend pas de la clé maître : il s'importe sur une autre machine. L'import n'est possible que sur une instance vide
+(aucun job, remote ni identité SSH) ; les jobs sont attribués à l'administrateur qui importe, et tout élément refusé
+par cette instance (chemin hors des racines autorisées, type de remote interdit…) est signalé sans bloquer le reste.
+
 ### Jetons d'API
 
 Page « Jetons d'API » (lien sous le nom d'utilisateur) : un jeton `rcs_…` permet d'appeler l'API depuis un script avec

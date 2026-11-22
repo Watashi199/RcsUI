@@ -106,6 +106,8 @@ func (s *Server) Handler() http.Handler {
 	a("PATCH /api/v1/users/{id}", s.adminOnly(s.handlePatchUser))
 	a("DELETE /api/v1/users/{id}", s.adminOnly(s.handleDeleteUser))
 	a("GET /api/v1/audit", s.adminOnly(s.handleAudit))
+	a("POST /api/v1/config/export", s.adminOnly(s.handleExportConfig))
+	a("POST /api/v1/config/import", s.adminOnly(s.handleImportConfig))
 
 	a("GET /api/v1/jobs", s.handleListJobs)
 	a("POST /api/v1/jobs", s.handleCreateJob)
@@ -184,7 +186,8 @@ func isSafeMethod(m string) bool {
 // changer le mot de passe ni gérer les jetons).
 func tokenForbidden(path string) bool {
 	return path == "/api/v1/auth/password" || path == "/api/v1/auth/logout" ||
-		path == "/api/v1/auth/tokens" || strings.HasPrefix(path, "/api/v1/auth/tokens/")
+		path == "/api/v1/auth/tokens" || strings.HasPrefix(path, "/api/v1/auth/tokens/") ||
+		strings.HasPrefix(path, "/api/v1/config/") // export : tous les secrets
 }
 
 // authed exige une session valide (ou un jeton d'API), le token CSRF pour les

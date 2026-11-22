@@ -113,6 +113,22 @@ export const fr = {
 	'admin.notify.smtpTo': 'Destinataires (séparés par des virgules)',
 	'admin.notify.sendTest': 'Envoyer un test',
 
+	// Export / import
+	'admin.config.title': 'Export / import de la configuration',
+	'admin.config.help':
+		"Un fichier chiffré par une phrase de passe : jobs, remotes rclone, identités SSH (clés privées comprises), hôtes approuvés, réglages et notifications. Ni comptes, ni droits, ni jetons d'API.",
+	'admin.config.export': 'Exporter',
+	'admin.config.passphrase': 'Phrase de passe',
+	'admin.config.passphraseHint': '12 caractères minimum. Sans elle, le fichier est illisible : conservez-la à part.',
+	'admin.config.download': 'Télécharger le fichier',
+	'admin.config.exported': 'Fichier exporté. Il contient tous les secrets : rangez-le en lieu sûr.',
+	'admin.config.import': 'Importer',
+	'admin.config.importHelp': 'Uniquement sur une instance vide (aucun job, remote ni identité SSH). Les jobs vous sont attribués.',
+	'admin.config.file': 'Fichier exporté',
+	'admin.config.importButton': 'Importer',
+	'admin.config.badFile': "Ce fichier n'est pas un export RcsUI.",
+	'admin.config.imported': 'Import terminé : {jobs} job(s), {remotes} remote(s), {ssh} identité(s) SSH.',
+
 	// Mot de passe
 	'admin.password.mismatch': 'Les deux mots de passe ne correspondent pas.',
 	'admin.password.title': 'Changer le mot de passe',
@@ -263,6 +279,20 @@ export const en: Record<keyof typeof fr, string> = {
 	'admin.notify.sendTest': 'Send test',
 
 	'admin.password.mismatch': 'The two passwords do not match.',
+	'admin.config.title': 'Configuration export / import',
+	'admin.config.help':
+		'A file encrypted with a passphrase: jobs, rclone remotes, SSH identities (private keys included), approved hosts, settings and notifications. No accounts, grants or API tokens.',
+	'admin.config.export': 'Export',
+	'admin.config.passphrase': 'Passphrase',
+	'admin.config.passphraseHint': '12 characters minimum. Without it the file cannot be read: keep it separately.',
+	'admin.config.download': 'Download the file',
+	'admin.config.exported': 'File exported. It contains every secret: store it safely.',
+	'admin.config.import': 'Import',
+	'admin.config.importHelp': 'Only on an empty instance (no jobs, remotes or SSH identities). Jobs are assigned to you.',
+	'admin.config.file': 'Exported file',
+	'admin.config.importButton': 'Import',
+	'admin.config.badFile': 'This file is not an RcsUI export.',
+	'admin.config.imported': 'Import complete: {jobs} job(s), {remotes} remote(s), {ssh} SSH identit(y/ies).',
 	'admin.password.title': 'Change password',
 	'admin.password.forced': 'You must choose a new password before continuing.',
 	'admin.password.current': 'Current password',

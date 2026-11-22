@@ -57,6 +57,16 @@ func (m *Manager) KnownHostsFile() string { return filepath.Join(m.StateDir, "kn
 // ad lie le chiffré à l'identité : un chiffré ne peut pas être déplacé sur une autre ligne.
 func ad(id int64) []byte { return []byte("ssh-identity:" + strconv.FormatInt(id, 10)) }
 
+// PrivatePEM retourne la clé privée en clair (PEM OpenSSH) d'une identité.
+// Réservé à l'export chiffré de la configuration.
+func (m *Manager) PrivatePEM(ctx context.Context, id int64) ([]byte, error) {
+	ident, err := m.DB.GetSSHIdentity(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return m.Box.Open(ident.PrivateEnc, ad(ident.ID))
+}
+
 // Fingerprint retourne l'empreinte SHA256 d'une clé publique.
 func Fingerprint(k ssh.PublicKey) string { return ssh.FingerprintSHA256(k) }
 
