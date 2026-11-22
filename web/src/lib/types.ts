@@ -198,6 +198,33 @@ export interface NotificationSettings {
 	ntfyUrl: string;
 	ntfySet: boolean;
 	ntfyTokenSet: boolean;
+	gotifyUrl: string;
+	gotifySet: boolean;
+	gotifyTokenSet: boolean;
+	smtp?: SmtpSettings;
+}
+
+export type SmtpSecurity = 'starttls' | 'tls' | 'none';
+
+export interface SmtpSettings {
+	host: string;
+	port: number;
+	security: SmtpSecurity;
+	username: string;
+	passwordSet: boolean;
+	from: string;
+	to: string[];
+}
+
+/** Mise à jour SMTP : password absent conserve le mot de passe ; host "" supprime l'e-mail. */
+export interface SmtpInput {
+	host: string;
+	port?: number;
+	security?: SmtpSecurity;
+	username?: string;
+	password?: string;
+	from?: string;
+	to?: string[];
 }
 
 /** Mise à jour : un champ secret absent conserve la valeur, "" l'efface. */
@@ -207,6 +234,9 @@ export interface NotificationInput {
 	webhookUrl?: string;
 	ntfyUrl?: string;
 	ntfyToken?: string;
+	gotifyUrl?: string;
+	gotifyToken?: string;
+	smtp?: SmtpInput;
 }
 
 export interface BrowseEntry {

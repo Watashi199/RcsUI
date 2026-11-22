@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { get, put, post, errorMessage } from '#lib/api.ts';
 	import { t } from '#lib/i18n/i18n.svelte.ts';
-	import type { NotificationInput, NotificationSettings, NotifyMode } from '#lib/types.ts';
+	import type { NotificationInput, NotificationSettings, NotifyMode, SmtpSecurity } from '#lib/types.ts';
 
 	// Les URL et le jeton ne sont jamais renvoyés par l'API : un champ laissé
 	// vide conserve la valeur enregistrée ; « Effacer » la supprime.
@@ -11,7 +11,13 @@
 	let webhookUrl = $state('');
 	let ntfyUrl = $state('');
 	let ntfyToken = $state('');
-	let clear = $state({ webhook: false, ntfy: false, token: false });
+	let gotifyUrl = $state('');
+	let gotifyToken = $state('');
+	let clear = $state({ webhook: false, ntfy: false, token: false, gotify: false, gotifyToken: false });
+	// E-mail : champs non secrets réaffichés ; mot de passe vide = conservé.
+	const noSmtp = { host: '', port: 587, security: 'starttls' as SmtpSecurity, username: '', password: '', from: '', to: '' };
+	let smtpOn = $state(false);
+	let smtp = $state({ ...noSmtp });
 	let error = $state('');
 	let msg = $state('');
 	let busy = $state(false);
@@ -20,8 +26,10 @@
 		cur = s;
 		on = s.on;
 		includeDryRuns = s.includeDryRuns;
-		webhookUrl = ntfyUrl = ntfyToken = '';
-		clear = { webhook: false, ntfy: false, token: false };
+		webhookUrl = ntfyUrl = ntfyToken = gotifyUrl = gotifyToken = '';
+		clear = { webhook: false, ntfy: false, token: false, gotify: false, gotifyToken: false };
+		smtpOn = !!s.smtp;
+		smtp = s.smtp ? { ...s.smtp, password: '', to: s.smtp.to.join(', ') } : { ...noSmtp };
 	}
 
 	(async () => {
@@ -40,6 +48,24 @@
 		else if (clear.ntfy) i.ntfyUrl = '';
 		if (ntfyToken) i.ntfyToken = ntfyToken;
 		else if (clear.token) i.ntfyToken = '';
+		if (gotifyUrl.trim()) i.gotifyUrl = gotifyUrl.trim();
+		else if (clear.gotify) i.gotifyUrl = '';
+		if (gotifyToken) i.gotifyToken = gotifyToken;
+		else if (clear.gotifyToken) i.gotifyToken = '';
+		if (smtpOn) {
+			i.smtp = {
+				host: smtp.host.trim(),
+				port: Number(smtp.port),
+				security: smtp.security,
+				username: smtp.username.trim(),
+				from: smtp.from.trim(),
+				to: smtp.to
+					.split(/[,\s]+/)
+					.map((a) => a.trim())
+					.filter(Boolean)
+			};
+			if (smtp.password) i.smtp.password = smtp.password;
+		} else if (cur?.smtp) i.smtp = { host: '' };
 		return i;
 	}
 
@@ -133,6 +159,80 @@
 				{/if}
 			</div>
 		</div>
+		<div class="field">
+			<label for="gu">{t('admin.notify.gotifyUrl')}</label>
+			<div class="row">
+				<input
+					id="gu"
+					type="url"
+					bind:value={gotifyUrl}
+					autocomplete="off"
+					placeholder={cur.gotifySet && !clear.gotify ? t('admin.notify.savedKeepPlaceholder', { url: cur.gotifyUrl }) : 'https://gotify.example'}
+				/>
+				{#if cur.gotifySet && !clear.gotify}
+					<button type="button" onclick={() => ((clear.gotify = true), (gotifyUrl = ''))}>{t('admin.notify.clear')}</button>
+				{/if}
+			</div>
+		</div>
+		<div class="field">
+			<label for="gt">{t('admin.notify.gotifyToken')}</label>
+			<div class="row">
+				<input
+					id="gt"
+					type="password"
+					bind:value={gotifyToken}
+					autocomplete="new-password"
+					placeholder={cur.gotifyTokenSet && !clear.gotifyToken ? t('admin.notify.tokenSaved') : ''}
+				/>
+				{#if cur.gotifyTokenSet && !clear.gotifyToken}
+					<button type="button" onclick={() => ((clear.gotifyToken = true), (gotifyToken = ''))}>{t('admin.notify.clear')}</button>
+				{/if}
+			</div>
+		</div>
+
+		<label class="check"><input type="checkbox" bind:checked={smtpOn} /> {t('admin.notify.email')}</label>
+		{#if smtpOn}
+			<div class="grid2">
+				<div class="field">
+					<label for="sh">{t('admin.notify.smtpHost')}</label>
+					<input id="sh" bind:value={smtp.host} required placeholder="smtp.example.org" />
+				</div>
+				<div class="field">
+					<label for="sp">{t('admin.notify.smtpPort')}</label>
+					<input id="sp" type="number" min="1" max="65535" bind:value={smtp.port} required />
+				</div>
+				<div class="field">
+					<label for="ss">{t('admin.notify.smtpSecurity')}</label>
+					<select id="ss" bind:value={smtp.security}>
+						<option value="starttls">{t('admin.notify.smtpStartTLS')}</option>
+						<option value="tls">{t('admin.notify.smtpTLS')}</option>
+						<option value="none">{t('admin.notify.smtpNone')}</option>
+					</select>
+				</div>
+				<div class="field">
+					<label for="su">{t('admin.notify.smtpUser')}</label>
+					<input id="su" bind:value={smtp.username} autocomplete="off" />
+				</div>
+				<div class="field">
+					<label for="spw">{t('admin.notify.smtpPassword')}</label>
+					<input
+						id="spw"
+						type="password"
+						bind:value={smtp.password}
+						autocomplete="new-password"
+						placeholder={cur.smtp?.passwordSet ? t('admin.notify.tokenSaved') : ''}
+					/>
+				</div>
+				<div class="field">
+					<label for="sf">{t('admin.notify.smtpFrom')}</label>
+					<input id="sf" type="email" bind:value={smtp.from} required placeholder="rcsui@example.org" />
+				</div>
+			</div>
+			<div class="field">
+				<label for="st">{t('admin.notify.smtpTo')}</label>
+				<input id="st" bind:value={smtp.to} required placeholder="ops@example.org" />
+			</div>
+		{/if}
 		<div class="hint">{t('admin.notify.encryptedHint')}</div>
 
 		<div class="row" style="margin-top:1rem">

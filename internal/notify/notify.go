@@ -1,6 +1,7 @@
-// Package notify envoie une notification à la fin des runs (jalon M7) : webhook
-// JSON générique et ntfy. La configuration vit dans la table settings, chiffrée
-// avec la clé maître (les URL de webhook et les jetons ntfy sont des secrets).
+// Package notify envoie une notification à la fin des runs : webhook JSON
+// générique et ntfy (M7), Gotify et e-mail SMTP (M11). La configuration vit
+// dans la table settings, chiffrée avec la clé maître (URL de webhook, jetons
+// et mot de passe SMTP sont des secrets).
 // Les envois sont asynchrones : une file bornée et un worker, avec quelques
 // tentatives sur erreur réseau, 429 ou 5xx.
 package notify
@@ -46,6 +47,15 @@ type Config struct {
 	WebhookURL     string `json:"webhookUrl,omitempty"`
 	NtfyURL        string `json:"ntfyUrl,omitempty"` // URL complète du topic, ex. https://ntfy.sh/mon-topic
 	NtfyToken      string `json:"ntfyToken,omitempty"`
+	GotifyURL      string `json:"gotifyUrl,omitempty"` // URL du serveur Gotify
+	GotifyToken    string `json:"gotifyToken,omitempty"`
+	// SMTP : e-mail (nil : désactivé).
+	SMTP *SMTPConfig `json:"smtp,omitempty"`
+}
+
+// channels indique si au moins un canal est configuré.
+func (c Config) channels() bool {
+	return c.WebhookURL != "" || c.NtfyURL != "" || c.GotifyURL != "" || c.SMTP != nil
 }
 
 // Validate vérifie la configuration.
@@ -70,6 +80,22 @@ func (c Config) Validate() error {
 	}
 	if len(c.NtfyToken) > 512 || strings.ContainsAny(c.NtfyToken, "\r\n") {
 		return errors.New("ntfyToken: invalid")
+	}
+	if c.GotifyURL != "" {
+		if err := checkURL(c.GotifyURL); err != nil {
+			return fmt.Errorf("gotifyUrl: %w", err)
+		}
+		if c.GotifyToken == "" {
+			return errors.New("gotifyToken: required with gotifyUrl")
+		}
+	}
+	if len(c.GotifyToken) > 512 || strings.ContainsAny(c.GotifyToken, "\r\n") {
+		return errors.New("gotifyToken: invalid")
+	}
+	if c.SMTP != nil {
+		if err := c.SMTP.Validate(); err != nil {
+			return fmt.Errorf("smtp.%w", err)
+		}
 	}
 	return nil
 }
@@ -235,7 +261,7 @@ func (n *Notifier) Save(ctx context.Context, c Config) error {
 // Non bloquant : appelé depuis le runner.
 func (n *Notifier) RunFinished(r store.Run, retryAt *time.Time) {
 	c := n.Config()
-	if n.queue == nil || !c.Wants(r.State, r.DryRun) || (c.WebhookURL == "" && c.NtfyURL == "") {
+	if n.queue == nil || !c.Wants(r.State, r.DryRun) || !c.channels() {
 		return
 	}
 	select {
@@ -247,24 +273,43 @@ func (n *Notifier) RunFinished(r store.Run, retryAt *time.Time) {
 
 // Test envoie un message de test de façon synchrone sur chaque canal configuré.
 func (n *Notifier) Test(ctx context.Context, c Config) error {
-	if c.WebhookURL == "" && c.NtfyURL == "" {
+	if !c.channels() {
 		return errors.New("no notification channel configured")
 	}
 	now := time.Now()
 	ev := Event{Test: true, Run: store.Run{ID: "TEST", JobName: "RcsUI test notification", Engine: "rsync",
 		Trigger: store.TriggerManual, State: store.StateSucceeded, Attempt: 1, QueuedAt: now, FinishedAt: &now}}
 	var errs []error
-	if c.WebhookURL != "" {
-		if err := n.sendWebhook(ctx, c, ev); err != nil {
-			errs = append(errs, fmt.Errorf("webhook: %w", err))
-		}
-	}
-	if c.NtfyURL != "" {
-		if err := n.sendNtfy(ctx, c, ev); err != nil {
-			errs = append(errs, fmt.Errorf("ntfy: %w", err))
+	for _, ch := range n.senders(c) {
+		if err := ch.send(ctx, ev); err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", ch.name, err))
 		}
 	}
 	return errors.Join(errs...)
+}
+
+type sender struct {
+	name string
+	send func(context.Context, Event) error
+}
+
+// senders retourne les canaux configurés.
+func (n *Notifier) senders(c Config) []sender {
+	var out []sender
+	if c.WebhookURL != "" {
+		out = append(out, sender{"webhook", func(ctx context.Context, ev Event) error { return n.sendWebhook(ctx, c, ev) }})
+	}
+	if c.NtfyURL != "" {
+		out = append(out, sender{"ntfy", func(ctx context.Context, ev Event) error { return n.sendNtfy(ctx, c, ev) }})
+	}
+	if c.GotifyURL != "" {
+		out = append(out, sender{"gotify", func(ctx context.Context, ev Event) error { return n.sendGotify(ctx, c, ev) }})
+	}
+	if c.SMTP != nil {
+		smtp := *c.SMTP
+		out = append(out, sender{"email", func(ctx context.Context, ev Event) error { return n.sendEmail(ctx, smtp, ev) }})
+	}
+	return out
 }
 
 // Stop vide la file (borne : ctx) et arrête le worker. À appeler après l'arrêt du runner.
@@ -286,14 +331,9 @@ func (n *Notifier) worker() {
 	for ev := range n.queue {
 		c := n.Config()
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		if c.WebhookURL != "" {
-			if err := n.withRetry(ctx, func() error { return n.sendWebhook(ctx, c, ev) }); err != nil {
-				n.Log.Warn("webhook notification failed", "run", ev.Run.ID, "err", err)
-			}
-		}
-		if c.NtfyURL != "" {
-			if err := n.withRetry(ctx, func() error { return n.sendNtfy(ctx, c, ev) }); err != nil {
-				n.Log.Warn("ntfy notification failed", "run", ev.Run.ID, "err", err)
+		for _, ch := range n.senders(c) {
+			if err := n.withRetry(ctx, func() error { return ch.send(ctx, ev) }); err != nil {
+				n.Log.Warn("notification failed", "channel", ch.name, "run", ev.Run.ID, "err", err)
 			}
 		}
 		cancel()
@@ -376,14 +416,22 @@ func (n *Notifier) sendNtfy(ctx context.Context, c Config, ev Event) error {
 }
 
 func (n *Notifier) post(ctx context.Context, target string, body []byte, bearer string) error {
+	h := http.Header{}
+	if bearer != "" {
+		h.Set("Authorization", "Bearer "+bearer)
+	}
+	return n.postWith(ctx, target, body, h)
+}
+
+func (n *Notifier) postWith(ctx context.Context, target string, body []byte, extra http.Header) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, target, bytes.NewReader(body))
 	if err != nil {
 		return permanentError{err}
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "RcsUI")
-	if bearer != "" {
-		req.Header.Set("Authorization", "Bearer "+bearer)
+	for k, v := range extra {
+		req.Header[k] = v
 	}
 	resp, err := n.Client.Do(req)
 	if err != nil {
