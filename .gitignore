@@ -16,3 +16,12 @@
 .idea/
 .vscode/
 *.log
+
+# e2e
+/e2e/node_modules/
+/e2e/.root/
+/e2e/test-results/
+/e2e/playwright-report/
+/e2e/server.log
+/e2e/.auth/
+/e2e/last-run.log

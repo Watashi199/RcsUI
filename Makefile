@@ -5,7 +5,7 @@ LDFLAGS        := -s -w -X main.version=$(VERSION) -X github.com/rclone/rclone/f
 BIN            := bin/rcsui
 IMAGE          ?= rcsui:dev
 
-.PHONY: all web-install web build build-noweb test test-go test-web check lint dev docker fixtures clean
+.PHONY: all web-install web build build-noweb test test-go test-web check lint dev docker e2e fixtures clean
 
 all: build
 
@@ -50,6 +50,12 @@ dev-web:
 
 docker:
 	docker buildx build --build-arg VERSION=$(VERSION) --build-arg RCLONE_VERSION=$(RCLONE_VERSION) -t $(IMAGE) --load .
+
+# Tests de bout en bout (Playwright) contre l'image, dans un conteneur jetable.
+e2e: IMAGE = rcsui:e2e
+e2e: docker
+	cd e2e && npm ci && npx playwright install chromium
+	bash e2e/run.sh $(IMAGE)
 
 # Régénère les fixtures du parser rsync avec la version de rsync locale.
 fixtures:
