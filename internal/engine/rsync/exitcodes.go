@@ -13,30 +13,32 @@ type ExitInfo struct {
 	Message   string
 }
 
+// Messages en anglais, comme toutes les erreurs renvoyées par l'API (l'interface
+// traduit ses propres textes, pas ceux du serveur). Libellés de man rsync.
 var exitMessages = map[int]string{
-	0:   "succès",
-	1:   "erreur de syntaxe ou d'usage",
-	2:   "incompatibilité de protocole (version rsync distante ?)",
-	3:   "erreur de sélection des fichiers/dossiers d'entrée-sortie",
-	4:   "action non supportée",
-	5:   "erreur au démarrage du protocole client-serveur",
-	10:  "erreur d'E/S socket",
-	11:  "erreur d'E/S fichier",
-	12:  "erreur dans le flux du protocole rsync",
-	13:  "erreur de diagnostic",
-	14:  "erreur IPC",
-	15:  "processus frère planté",
-	16:  "processus frère tué par un signal",
-	19:  "SIGUSR1 reçu",
-	20:  "SIGINT, SIGTERM ou SIGHUP reçu",
-	21:  "erreur de waitpid()",
-	22:  "erreur d'allocation mémoire",
-	23:  "transfert partiel dû à des erreurs",
-	24:  "transfert partiel : des fichiers source ont disparu",
-	25:  "la limite --max-delete a stoppé des suppressions",
-	30:  "timeout en émission/réception",
-	35:  "timeout en attente de connexion au démon",
-	255: "erreur de connexion SSH",
+	0:   "success",
+	1:   "syntax or usage error",
+	2:   "protocol incompatibility (remote rsync version?)",
+	3:   "errors selecting input/output files, dirs",
+	4:   "requested action not supported",
+	5:   "error starting client-server protocol",
+	10:  "error in socket I/O",
+	11:  "error in file I/O",
+	12:  "error in rsync protocol data stream",
+	13:  "errors with program diagnostics",
+	14:  "error in IPC code",
+	15:  "sibling process crashed",
+	16:  "sibling process terminated abnormally",
+	19:  "received SIGUSR1",
+	20:  "received SIGINT, SIGTERM, or SIGHUP",
+	21:  "some error returned by waitpid()",
+	22:  "error allocating core memory buffers",
+	23:  "partial transfer due to error",
+	24:  "partial transfer due to vanished source files",
+	25:  "the --max-delete limit stopped deletions",
+	30:  "timeout in data send/receive",
+	35:  "timeout waiting for daemon connection",
+	255: "SSH connection error",
 }
 
 // InterpretExit traduit un code de retour en issue de run.
@@ -45,7 +47,7 @@ var exitMessages = map[int]string{
 func InterpretExit(code int, cancelRequested, vanishedOK bool) ExitInfo {
 	msg, ok := exitMessages[code]
 	if !ok {
-		msg = fmt.Sprintf("code de sortie inconnu %d", code)
+		msg = fmt.Sprintf("unknown exit code %d", code)
 	}
 	info := ExitInfo{Message: msg}
 	if cancelRequested {
