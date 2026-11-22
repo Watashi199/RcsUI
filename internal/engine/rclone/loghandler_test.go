@@ -63,24 +63,35 @@ func TestLogRouterUngrouped(t *testing.T) {
 	if len(bis.logs) != 1 || bis.logs[0].Msg != "Applying changes" || len(other.logs) != 0 {
 		t.Fatalf("bisync=%+v other=%+v", bis.logs, other.logs)
 	}
-	if !router.receivedLive("run/b1") || router.receivedLive("run/c1") {
-		t.Error("live flag")
-	}
 	if inner.msgs[len(inner.msgs)-1] != "Applying changes" {
 		t.Errorf("not forwarded to rclone: %v", inner.msgs)
 	}
+	output := []engine.LogLine{{Msg: "Applying changes"}, {Msg: "Bisync successful"}}
+	// Seul du début à la fin : tout a été reçu en direct, rien à rejouer.
+	if got := router.pendingOutput("run/b1", output); len(got) != 0 {
+		t.Errorf("sole bisync replays %v", got)
+	}
+	// Un run qui n'a rien reçu en direct rejoue tout.
+	if got := router.pendingOutput("run/c1", output); len(got) != 2 {
+		t.Errorf("no live delivery: replays %v", got)
+	}
 
-	// Deux bisyncs : ambigu, rien n'est attribué.
+	// Deux bisyncs : ambigu, rien n'est attribué...
 	bis2 := &sinkRec{}
 	router.register("run/b2", bis2, true)
 	_ = h.Handle(ctx, record(slog.LevelInfo, "ambiguous"))
 	if len(bis.logs) != 1 || len(bis2.logs) != 0 {
 		t.Fatalf("ambiguous message attributed: %+v %+v", bis.logs, bis2.logs)
 	}
+	// ...et le premier rejoue ce qu'il n'a pas reçu pendant le chevauchement (sans doublon).
+	got := router.pendingOutput("run/b1", append(output, engine.LogLine{Msg: "ambiguous"}))
+	if len(got) != 2 || got[0].Msg != "Bisync successful" || got[1].Msg != "ambiguous" {
+		t.Errorf("overlapped bisync replays %+v", got)
+	}
 
 	router.unregister("run/b1")
 	router.unregister("run/b2")
-	if router.receivedLive("run/b1") {
-		t.Error("live flag kept after unregister")
+	if got := router.pendingOutput("run/b1", output); len(got) != 2 {
+		t.Error("state kept after unregister")
 	}
 }

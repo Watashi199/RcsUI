@@ -377,10 +377,15 @@ func (x *execution) run() {
 	x.mu.Lock()
 	cancelled := x.cancelled
 	x.mu.Unlock()
-	// Récit reçu en direct (bisync seul en cours) : "output" en serait le doublon.
-	if x.bisync && !x.c.logs.receivedLive(x.group) {
-		for _, l := range bisyncOutputLines(js.Output) {
-			l.Time, l.Msg = time.Now(), Redact(l.Msg)
+	// "output" rejoué en fin de run, sans ce qui a déjà été reçu en direct
+	// (bisync seul en cours) : cf. logRouter.pendingOutput.
+	if x.bisync {
+		lines := bisyncOutputLines(js.Output)
+		for i := range lines {
+			lines[i].Msg = Redact(lines[i].Msg)
+		}
+		for _, l := range x.c.logs.pendingOutput(x.group, lines) {
+			l.Time = time.Now()
 			x.sink.OnLog(l)
 		}
 	}
