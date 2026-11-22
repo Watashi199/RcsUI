@@ -32,6 +32,9 @@ Critère de fini : `v1.0.1` publiée par la nouvelle CI, sans avertissement, Dep
 1. **Relances persistées.** Aujourd'hui les relances programmées vivent en mémoire et sont perdues au redémarrage
    (README, M7). Colonne `retry_at` sur le run (ou table `pending_retries`) relue par le runner au boot, avec la
    même règle de priorité qu'en mémoire (un lancement manuel ou planifié remplace la relance).
+   À corriger au passage : `Manager.finish` écrit l'état `failed` et libère le job **avant** de programmer la
+   relance. Un lancement manuel arrivé dans cet intervalle ne remplace pas la relance, et le job tourne deux fois.
+   La relance doit être enregistrée dans la même section critique que la libération du job.
 2. **Récit bisync dans le log du run.** Limite connue : les messages INFO de `sync/bisync` ne sont pas attribués
    au run. Piste : relever le niveau capté pour le groupe du run pendant un bisync, ou relire le fichier de log
    que bisync écrit dans `/data/bisync`. Spike d'une demi-journée avant de s'engager.
