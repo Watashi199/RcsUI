@@ -88,6 +88,17 @@ func (r *Resolver) Resolve(p string) (string, error) {
 	return real, nil
 }
 
+// Canonical retourne p (absolu) avec les symlinks de son plus long préfixe
+// existant résolus, ou p nettoyé si la résolution échoue. Sans contrôle des
+// racines : sert à comparer des chemins, pas à autoriser un accès.
+func Canonical(p string) string {
+	p = filepath.Clean(p)
+	if real, err := resolveExistingPrefix(p); err == nil {
+		return real
+	}
+	return p
+}
+
 // resolveExistingPrefix résout les symlinks du plus long préfixe existant de p
 // puis y rajoute la partie inexistante.
 func resolveExistingPrefix(p string) (string, error) {

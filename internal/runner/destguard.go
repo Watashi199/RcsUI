@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"rcsui/internal/engine"
+	"rcsui/internal/paths"
 )
 
 // ErrDestinationBusy : le job demande l'exclusivité de sa destination et un
@@ -31,6 +32,20 @@ func writtenEndpoints(mode engine.Mode, src, dst engine.Endpoint) []engine.Endpo
 	return []engine.Endpoint{dst}
 }
 
+// place est un emplacement écrit : système de fichiers et chemin normalisé.
+type place struct{ fs, path string }
+
+// writtenPlaces calcule les emplacements écrits par un run. Les chemins locaux
+// ont leurs symlinks résolus (comme le font les moteurs) : appel hors m.mu.
+func writtenPlaces(mode engine.Mode, src, dst engine.Endpoint) []place {
+	var out []place
+	for _, e := range writtenEndpoints(mode, src, dst) {
+		fsID, p := location(e)
+		out = append(out, place{fsID, p})
+	}
+	return out
+}
+
 // location identifie le système de fichiers d'un endpoint (même machine, même
 // remote) et le chemin normalisé dans celui-ci.
 func location(e engine.Endpoint) (fsID, p string) {
@@ -48,19 +63,18 @@ func location(e engine.Endpoint) (fsID, p string) {
 	default:
 		fsID = "local"
 	}
-	p = strings.ReplaceAll(e.Path, `\`, "/")
+	p = e.Path
+	if fsID == "local" && p != "" {
+		p = paths.Canonical(p)
+	}
+	p = strings.ReplaceAll(p, `\`, "/")
 	p = path.Clean("/" + p)
 	return fsID, p
 }
 
-// endpointsOverlap : même système de fichiers et un chemin inclus dans l'autre.
-func endpointsOverlap(a, b engine.Endpoint) bool {
-	fa, pa := location(a)
-	fb, pb := location(b)
-	if fa != fb {
-		return false
-	}
-	return within(pa, pb) || within(pb, pa)
+// overlaps : même système de fichiers et un chemin inclus dans l'autre.
+func (a place) overlaps(b place) bool {
+	return a.fs == b.fs && (within(a.path, b.path) || within(b.path, a.path))
 }
 
 // within indique si p est q ou se trouve sous q.
@@ -68,11 +82,11 @@ func within(p, q string) bool {
 	return p == q || q == "/" || strings.HasPrefix(p, q+"/")
 }
 
-// writesOverlap : deux runs modifient un même emplacement.
-func writesOverlap(a, b engine.Spec) bool {
-	for _, x := range writtenEndpoints(a.Mode, a.Source, a.Destination) {
-		for _, y := range writtenEndpoints(b.Mode, b.Source, b.Destination) {
-			if endpointsOverlap(x, y) {
+// placesOverlap : deux runs modifient un même emplacement.
+func placesOverlap(a, b []place) bool {
+	for _, x := range a {
+		for _, y := range b {
+			if x.overlaps(y) {
 				return true
 			}
 		}
@@ -82,9 +96,9 @@ func writesOverlap(a, b engine.Spec) bool {
 
 // destinationBusyLocked retourne l'erreur à opposer à un run exclusif si un
 // autre job actif (en file ou en cours) écrit au même endroit. m.mu est tenu.
-func (m *Manager) destinationBusyLocked(jobID int64, spec engine.Spec) error {
+func (m *Manager) destinationBusyLocked(jobID int64, writes []place) error {
 	for jid, ar := range m.byJob {
-		if jid != jobID && writesOverlap(spec, ar.spec) {
+		if jid != jobID && placesOverlap(writes, ar.writes) {
 			return &DestinationBusyError{JobName: ar.run.JobName}
 		}
 	}

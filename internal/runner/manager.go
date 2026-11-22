@@ -91,6 +91,7 @@ type ProgressEvent struct {
 type activeRun struct {
 	run       store.Run
 	spec      engine.Spec
+	writes    []place // emplacements écrits, résolus (destination exclusive)
 	jobID     int64
 	attempt   int
 	state     store.RunState
@@ -239,6 +240,7 @@ func (m *Manager) submitSnapshot(ctx context.Context, snap SpecSnapshot, trig st
 	}
 	raw, _ := json.Marshal(snap)
 	jid := snap.JobID
+	writes := writtenPlaces(spec.Mode, spec.Source, spec.Destination) // hors verrou : accès disque
 	logRel, _ := LogPaths(id, now)
 	r := store.Run{ID: id, JobID: &jid, JobName: snap.Name, Engine: string(snap.Engine), Trigger: trig,
 		TriggeredBy: by, DryRun: dryRun, Attempt: attempt, State: store.StateQueued, SpecJSON: string(raw), QueuedAt: now, LogPath: logRel}
@@ -253,7 +255,7 @@ func (m *Manager) submitSnapshot(ctx context.Context, snap SpecSnapshot, trig st
 		return "", ErrJobActive
 	}
 	if snap.ExclusiveDest {
-		if err := m.destinationBusyLocked(jid, spec); err != nil {
+		if err := m.destinationBusyLocked(jid, writes); err != nil {
 			m.mu.Unlock()
 			return "", err
 		}
@@ -265,7 +267,7 @@ func (m *Manager) submitSnapshot(ctx context.Context, snap SpecSnapshot, trig st
 		}
 		return "", err
 	}
-	ar := &activeRun{run: r, spec: spec, jobID: jid, attempt: attempt, state: store.StateQueued, done: make(chan struct{})}
+	ar := &activeRun{run: r, spec: spec, writes: writes, jobID: jid, attempt: attempt, state: store.StateQueued, done: make(chan struct{})}
 	m.active[id] = ar
 	m.byJob[jid] = ar
 	m.queue = append(m.queue, ar)

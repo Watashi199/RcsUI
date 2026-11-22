@@ -3,6 +3,8 @@ package runner
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -11,6 +13,36 @@ import (
 )
 
 func local(p string) engine.Endpoint { return engine.Endpoint{Type: engine.EndpointLocal, Path: p} }
+
+func endpointsOverlap(a, b engine.Endpoint) bool {
+	fa, pa := location(a)
+	fb, pb := location(b)
+	return place{fa, pa}.overlaps(place{fb, pb})
+}
+
+func writesOverlap(a, b engine.Spec) bool {
+	return placesOverlap(writtenPlaces(a.Mode, a.Source, a.Destination), writtenPlaces(b.Mode, b.Source, b.Destination))
+}
+
+// Deux chemins vers le même dossier via un symlink se chevauchent (les moteurs
+// résolvent les symlinks avant d'écrire).
+func TestOverlapThroughSymlink(t *testing.T) {
+	dir := t.TempDir()
+	real := filepath.Join(dir, "backup")
+	if err := os.MkdirAll(real, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(dir, "alias")
+	if err := os.Symlink(real, alias); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	if !endpointsOverlap(local(real), local(filepath.Join(alias, "photos"))) {
+		t.Error("overlap through a symlink not detected")
+	}
+	if endpointsOverlap(local(filepath.Join(dir, "other")), local(alias)) {
+		t.Error("unrelated path flagged")
+	}
+}
 
 func TestEndpointsOverlap(t *testing.T) {
 	ssh := func(host string, port int, p string) engine.Endpoint {
