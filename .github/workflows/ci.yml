@@ -3,8 +3,15 @@ name: ci
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    tags: ['v*'] # les filtres de chemins ne s'appliquent pas aux tags
+    paths-ignore: ['**.md', 'docs/**', 'LICENSE']
   pull_request:
+    paths-ignore: ['**.md', 'docs/**', 'LICENSE']
+
+# Un nouveau commit sur une PR annule le run précédent (main et tags vont au bout).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -93,7 +100,10 @@ jobs:
             e2e/server.log
           retention-days: 7
 
+  # Construction multi-arch (arm64 sous QEMU, le job le plus long) : seulement sur
+  # main et les tags. Sur une PR, e2e construit et exerce déjà l'image amd64.
   docker:
+    if: github.event_name != 'pull_request'
     needs: [go, web]
     runs-on: ubuntu-latest
     permissions:
@@ -111,14 +121,6 @@ jobs:
           tags: rcsui:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Smoke test (amd64)
-        run: |
-          docker buildx build --load -t rcsui:smoke .
-          docker run --rm --entrypoint rsync rcsui:smoke --version | head -1
-          docker run -d --name rcsui -p 8080:8080 -e RCSUI_ADMIN_PASSWORD=ci-admin-password rcsui:smoke
-          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/api/v1/healthz && break; sleep 1; done
-          curl -fsS -o /dev/null http://127.0.0.1:8080/
-          docker logs rcsui
 
   # Publication d'une release (tag v*) : uniquement si tous les tests sont verts.
   # Image multi-arch sur GHCR, SBOM et provenance SLSA attachés par buildx,
