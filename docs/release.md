@@ -9,7 +9,7 @@
    git push origin v1.0.0
    ```
    Un suffixe (`v1.1.0-rc.1`) produit une *pre-release* GitHub et ne déplace pas le tag `latest`.
-3. Le job `release` du workflow `ci` ne démarre que si `go`, `web` et `docker` réussissent sur ce tag. Il :
+3. Le job `release` du workflow `ci` ne démarre que si `go`, `web`, `e2e` et `docker` réussissent sur ce tag. Il :
    - construit l'image `linux/amd64` + `linux/arm64` et la pousse sur `ghcr.io/<owner>/rcsui` avec les tags
      `1.0.0`, `1.0`, `1` (pas de tag majeur pour `0.x`) et `latest` ;
    - attache un SBOM (SPDX) et une provenance SLSA (`mode=max`) à l'image ;
