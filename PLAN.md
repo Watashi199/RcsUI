@@ -960,7 +960,7 @@ rc accepte `remote:path`, des chemins locaux nus, des backends à la volée `:sf
 | 13 | XSS | Svelte échappe par défaut ; `{@html}` est interdit (règle ESLint). CSP `default-src 'self'; script-src 'self' 'sha256-…'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'` (hashes via `kit.csp` en mode `hash`). En plus : `X-Content-Type-Options: nosniff` et `Referrer-Policy: same-origin`. |
 | 14 | DoS applicatif | Corps limités à 1 MiB, limite de flux SSE, `max_concurrent`, explorateur plafonné à 2000 entrées, rétention des logs (90 jours) avec purge quotidienne. |
 | 15 | Conteneur | Non-root, `--security-opt no-new-privileges`, aucune capability requise, rootfs en lecture seule possible (`/data` et `/tmp` seuls inscriptibles). |
-| 16 | Supply chain | `go mod verify`, `govulncheck`, `npm ci` avec lockfile, images épinglées par digest, Renovate, SBOM (syft) en release. |
+| 16 | Supply chain | `go mod verify`, `govulncheck`, `npm ci` avec lockfile, images épinglées par digest, Dependabot (au lieu de Renovate : aucune application à installer), SBOM (buildx) en release. |
 
 ---
 
