@@ -16,6 +16,8 @@ Cible : homelab / NAS, quelques utilisateurs, un seul `docker run`. Conception d
 | M6 — OIDC (code flow + PKCE, rôles par groupes, provisioning optionnel) | ✅ testé contre un IdP simulé |
 | M7 — durcissement et confort (CSP par hash, relances automatiques, rattrapage des cron manqués, notifications webhook/ntfy, `/metrics` Prometheus, bisync rclone, interface FR/EN, tests e2e Playwright en CI) | ✅ release **v1.0.0** signée sur GHCR ([docs/release.md](docs/release.md)) |
 
+Suite (maintenance, robustesse, chiffrement de la config rclone, nouvelles fonctions) : [docs/roadmap.md](docs/roadmap.md).
+
 ## Fonctionnalités M7
 
 - **Relances automatiques** (par job) : après un échec jugé transitoire par le moteur (rsync : codes 5, 10, 12, 30, 35 ; rclone : erreur non fatale), le job est relancé jusqu'à *N* fois (0–10) après un délai (10 s – 24 h, 300 s par défaut). Le run porte `trigger=retry` et un numéro de tentative. Un lancement manuel ou planifié remplace la relance en attente. Les relances programmées vivent en mémoire et sont perdues au redémarrage (l'option « relancer si interrompu » couvre ce cas).

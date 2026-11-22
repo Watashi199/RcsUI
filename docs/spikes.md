@@ -83,5 +83,6 @@ pour rien ; à signaler en amont. La CI exécute ce package sans `-race`.
 
 ## Non vérifié
 
-- Fixtures rsync 3.4.x : seules la 3.2.7 et la 3.5.2 sont capturées.
+- ~~Fixtures rsync 3.4.x~~ : capturées le 2026-11-22 avec rsync 3.4.3 (`alpine:3.20`, utilisateur non-root). Même
+  format de progression que la 3.2.7 (`kB/s`) ; mêmes codes de sortie ; le parser passe sans modification.
 - Build arm64 de l'image (fait par la CI via QEMU, pas en local).

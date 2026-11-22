@@ -1,0 +1,52 @@
+# Mises à jour des dépendances (PLAN.md §8, n° 16 ; docs/roadmap.md, M8).
+# Dependabot plutôt que Renovate : intégré à GitHub, aucune application à installer.
+# cooldown : on laisse 14 jours à une version avant de l'adopter (retraits, compromissions).
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      go:
+        patterns: ["*"]
+    commit-message:
+      prefix: "build(go)"
+
+  - package-ecosystem: npm
+    directories: [/web, /e2e]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "build(npm)"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      docker:
+        patterns: ["*"]
+    commit-message:
+      prefix: "build(docker)"

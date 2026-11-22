@@ -102,6 +102,17 @@ func TestNoRetryWhenNotRetryableOrDryRun(t *testing.T) {
 	e.noStart(t)
 }
 
+func waitPendingRetry(t *testing.T, m *Manager, jobID int64) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for m.PendingRetry(jobID) == nil {
+		if time.Now().After(deadline) {
+			t.Fatal("retry should be pending")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 func TestManualRunReplacesPendingRetry(t *testing.T) {
 	e := newEnv(t, 2)
 	e.m.d.RetryUnit = time.Hour // la relance ne doit jamais partir d'elle-même
@@ -112,9 +123,8 @@ func TestManualRunReplacesPendingRetry(t *testing.T) {
 	id, _ := e.m.Submit(ctx, jid, store.TriggerManual, nil, false)
 	e.nextStart(t).finish(engine.Result{Outcome: engine.OutcomeFailed, Retryable: true, Err: errNet})
 	waitState(t, e.db, id, store.StateFailed)
-	if e.m.PendingRetry(jid) == nil {
-		t.Fatal("retry should be pending")
-	}
+	// finish écrit l'état final avant de programmer la relance : on attend celle-ci.
+	waitPendingRetry(t, e.m, jid)
 	if _, err := e.m.Submit(ctx, jid, store.TriggerManual, nil, false); err != nil {
 		t.Fatal(err)
 	}

@@ -1,9 +1,9 @@
-# syntax=docker/dockerfile:1.7
-# RcsUI — image multi-stage (PLAN.md §10.2). Épingler les images par digest
-# (Renovate) avant une release.
+# syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+# RcsUI — image multi-stage (PLAN.md §10.2). Images épinglées par digest,
+# mises à jour par Dependabot (.github/dependabot.yml).
 
 # 1) Frontend SvelteKit (adapter-static)
-FROM node:24-alpine AS web
+FROM node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS web
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --ignore-scripts
@@ -11,7 +11,7 @@ COPY web/ ./
 RUN npx svelte-kit sync && npm run build
 
 # 2) Backend Go (pur Go, cross-compilation sans CGO)
-FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS go
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:70bd7ddea8b6cbe5d6943cde279d6b67feb10cc924fb9100d1d8757c1575b280 AS go
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
@@ -30,7 +30,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/g
       -o /out/rcsui ./cmd/rcsui
 
 # 3) Runtime : rsync + openssh-client, utilisateur non-root
-FROM alpine:3.22
+FROM alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
 RUN apk add --no-cache rsync openssh-client ca-certificates tzdata tini su-exec shadow \
  && addgroup -S -g 1000 rcsui && adduser -S -D -u 1000 -G rcsui -h /home/rcsui rcsui \
  && mkdir -p /data && chown rcsui:rcsui /data

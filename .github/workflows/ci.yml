@@ -19,14 +19,23 @@ jobs:
           go-version-file: go.mod
       - name: Install rsync (engine integration tests)
         run: sudo apt-get update && sudo apt-get install -y rsync openssh-client
+      - name: Verify modules
+        run: go mod verify
       - name: Vet
         run: go vet -tags noweb ./...
       - name: Test (race)
         # internal/engine/rclone est exclu de -race : data race connue dans rclone v1.76.0
         # (fs/accounting/stats.go RemoteStats lit errors/lastError hors verrou). Voir docs/spikes.md.
+        # La couverture par package (objectif ≥ 80 %, PLAN.md §9) est reportée dans le résumé du run.
         run: |
-          go test -tags noweb -race -count=1 $(go list -tags noweb ./... | grep -v /internal/engine/rclone)
-          go test -tags noweb -count=1 ./internal/engine/rclone/
+          set -o pipefail
+          go test -tags noweb -race -count=1 -cover $(go list -tags noweb ./... | grep -v /internal/engine/rclone) | tee test.out
+          go test -tags noweb -count=1 -cover ./internal/engine/rclone/ | tee -a test.out
+          {
+            echo '| Package | Couverture |'
+            echo '|---|---|'
+            sed -nE 's/^ok[[:space:]]+([^[:space:]]+).*coverage: ([0-9.]+%).*/| `\1` | \2 |/p' test.out
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest -tags noweb ./...
 
