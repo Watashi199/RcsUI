@@ -271,7 +271,7 @@ var errBadRequest = errors.New("bad request")
 
 type badRequestError struct{ msg string }
 
-func (e badRequestError) Error() string { return e.msg }
+func (e badRequestError) Error() string   { return e.msg }
 func (e badRequestError) Is(t error) bool { return t == errBadRequest }
 
 func badRequest(msg string) error { return badRequestError{msg} }

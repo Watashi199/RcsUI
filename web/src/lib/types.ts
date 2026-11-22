@@ -3,7 +3,7 @@
 export type Role = 'admin' | 'operator' | 'viewer';
 export type Permission = '' | 'view' | 'run' | 'edit';
 export type EngineKind = 'rsync' | 'rclone';
-export type Mode = 'copy' | 'sync' | 'move';
+export type Mode = 'copy' | 'sync' | 'move' | 'bisync';
 export type EndpointType = 'local' | 'remote' | 'ssh';
 export type RunState =
 	| 'queued'

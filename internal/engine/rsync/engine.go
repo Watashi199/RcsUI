@@ -122,6 +122,9 @@ func (e *Engine) checkSSHEndpoint(ctx context.Context, ve *engine.ValidationErro
 
 // Validate implémente engine.Engine.
 func (e *Engine) Validate(ctx context.Context, s engine.Spec) error {
+	if s.Resync {
+		return &engine.ValidationError{Fields: map[string]string{"resync": "only valid for rclone bisync jobs"}}
+	}
 	o, err := e.opts(s)
 	if err != nil {
 		return err

@@ -6,6 +6,7 @@ package rclone
 // (linux/amd64, -s -w) ; ~16 Mo avec seulement local+memory.
 import (
 	_ "github.com/rclone/rclone/backend/all"   // tous les backends
+	_ "github.com/rclone/rclone/cmd/bisync"    // sync/bisync
 	_ "github.com/rclone/rclone/fs/operations" // operations/*
 	_ "github.com/rclone/rclone/fs/sync"       // sync/*
 )

@@ -35,10 +35,18 @@
 		void load();
 	});
 
-	async function run(dryRun: boolean) {
+	async function run(dryRun: boolean, resync = false) {
 		error = '';
+		if (
+			resync &&
+			!confirm(
+				'Resync : les deux côtés sont fusionnés et les listings de référence reconstruits. Rien n’est supprimé, ' +
+					'mais des fichiers supprimés d’un seul côté depuis le dernier run réussi réapparaîtront. Continuer ?'
+			)
+		)
+			return;
 		try {
-			const r = await post<{ runId: string }>(`/jobs/${id}/run`, { dryRun });
+			const r = await post<{ runId: string }>(`/jobs/${id}/run`, resync ? { dryRun, resync } : { dryRun });
 			await goto('/runs/' + r.runId);
 		} catch (e) {
 			error = errorMessage(e);
@@ -98,7 +106,7 @@
 		job
 			? Object.entries(job.options)
 					.filter(([k]) => k !== 'v')
-					.map(([k, v]) => `${k}=${Array.isArray(v) ? v.join(', ') : v}`)
+					.map(([k, v]) => `${k}=${Array.isArray(v) ? v.join(', ') : typeof v === 'object' ? JSON.stringify(v) : v}`)
 			: []
 	);
 </script>
@@ -113,6 +121,10 @@
 		{#if canRun}
 			<button class="primary" onclick={() => run(false)} disabled={job.active}>Lancer</button>
 			<button onclick={() => run(true)} disabled={job.active}>Dry-run</button>
+		{/if}
+		{#if canEdit && job.mode === 'bisync'}
+			<button onclick={() => run(false, true)} disabled={job.active} title="Requis au premier run, après un changement de filtres ou une erreur critique">Resync</button>
+			<button onclick={() => run(true, true)} disabled={job.active}>Resync (dry-run)</button>
 		{/if}
 		{#if canEdit}
 			<a class="btn" href="/jobs/{job.id}/edit">Modifier</a>

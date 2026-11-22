@@ -141,7 +141,9 @@ func run() error {
 			return fmt.Errorf("rclone: %w", err)
 		}
 		defer rclone.Finalize()
-		engines[engine.KindRclone] = &rclone.Engine{Client: rc, Paths: resolver}
+		// Listings de référence de bisync sur le volume : ils doivent survivre
+		// aux redémarrages, sinon chaque run exigerait un resync.
+		engines[engine.KindRclone] = &rclone.Engine{Client: rc, Paths: resolver, BisyncDir: filepath.Join(cfg.DataDir, "bisync")}
 		info.RcloneEnabled = true
 		info.RcloneVersion = rc.Version()
 	}
