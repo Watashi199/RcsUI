@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"rcsui/internal/engine"
@@ -99,20 +100,37 @@ func (m *Manager) fireRetry(jobID int64, attempt int, p *pendingRetry) {
 	delete(m.retries, jobID)
 	m.mu.Unlock()
 
+	// La ligne pending_retries n'est supprimée qu'avec l'insertion du run qui la
+	// remplace (submitSnapshot → clearRetryLocked, sous m.mu), ou si la relance
+	// est définitivement impossible. Un arrêt entre-temps la conserve.
 	ctx := context.Background()
-	// Consommée, qu'elle démarre ou non (sinon elle repartirait au prochain démarrage).
-	if err := m.d.DB.DeletePendingRetry(ctx, jobID); err != nil {
-		m.d.Log.Error("delete pending retry", "job", jobID, "err", err)
-	}
 	j, err := m.d.DB.GetJob(ctx, jobID)
 	if err != nil {
 		m.d.Log.Warn("automatic retry: job unavailable", "job", jobID, "err", err)
+		m.dropPersistedRetry(ctx, jobID)
 		return
 	}
 	snap := SnapshotOf(j)
 	snap.Resync = p.resync // la relance d'un resync reste un resync
 	if _, err := m.submitSnapshot(ctx, snap, store.TriggerRetry, nil, false, attempt); err != nil {
+		if errors.Is(err, ErrShuttingDown) {
+			return // conservée pour le prochain démarrage
+		}
 		m.d.Log.Warn("automatic retry not started", "job", j.Name, "attempt", attempt, "err", err)
+		m.dropPersistedRetry(ctx, jobID)
+	}
+}
+
+// dropPersistedRetry supprime une relance devenue impossible, sauf si une autre
+// a été programmée entre-temps pour ce job.
+func (m *Manager) dropPersistedRetry(ctx context.Context, jobID int64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, rearmed := m.retries[jobID]; rearmed || m.closing {
+		return
+	}
+	if err := m.d.DB.DeletePendingRetry(ctx, jobID); err != nil {
+		m.d.Log.Error("delete pending retry", "job", jobID, "err", err)
 	}
 }
 

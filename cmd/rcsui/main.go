@@ -163,6 +163,9 @@ func run() error {
 			func(f runner.Finished) { notifier.RunFinished(f.Run, f.RetryAt) },
 		}}, maxConc)
 	met.Runner = mgr
+	// Avant Recover et RestoreRetries : les runs qu'ils relancent écrivent leurs
+	// fichiers SSH dans ce répertoire (une relance échue démarre immédiatement).
+	cleanRunTmp(cfg.RunTmpDir(), log)
 	n, err := mgr.Recover(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("recover runs: %w", err)
@@ -175,7 +178,6 @@ func run() error {
 	} else if n > 0 {
 		log.Info("automatic retries restored", "count", n)
 	}
-	cleanRunTmp(cfg.RunTmpDir(), log)
 
 	sched := scheduler.New(mgr, db, time.Local, log)
 	if err := sched.Start(ctx); err != nil {

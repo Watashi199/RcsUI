@@ -131,6 +131,49 @@ func TestRetrySurvivesRestart(t *testing.T) {
 	x.finish(engine.Result{Outcome: engine.OutcomeSucceeded})
 }
 
+func TestImpossibleRetryIsDropped(t *testing.T) {
+	e := newEnv(t, 2)
+	e.m.d.RetryUnit = time.Millisecond
+	jid := e.job(t, "j")
+	e.setRetry(t, jid, 1, 50)
+	id := e.failRetryable(t, jid)
+	waitState(t, e.db, id, store.StateFailed)
+	// Le job devient invalide avant la relance : elle échoue à la validation et
+	// ne doit pas repartir à chaque démarrage.
+	e.eng.mu.Lock()
+	e.eng.invalid = true
+	e.eng.mu.Unlock()
+	deadline := time.Now().Add(3 * time.Second)
+	for len(e.pendingRows(t)) != 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("impossible retry still persisted")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if e.m.PendingRetry(jid) != nil {
+		t.Error("impossible retry still pending in memory")
+	}
+}
+
+func TestRetryFiringDuringShutdownIsKept(t *testing.T) {
+	e := newEnv(t, 2)
+	jid := e.job(t, "j")
+	ctx := context.Background()
+	p := store.PendingRetry{JobID: jid, At: time.Now().Add(time.Hour), Attempt: 2}
+	if err := e.db.SavePendingRetry(ctx, p); err != nil {
+		t.Fatal(err)
+	}
+	e.m.mu.Lock()
+	e.m.armRetryLocked(p)
+	pr := e.m.retries[jid]
+	e.m.closing = true // arrêt en cours au moment où le timer part
+	e.m.mu.Unlock()
+	e.m.fireRetry(jid, 2, pr)
+	if rows := e.pendingRows(t); len(rows) != 1 {
+		t.Fatalf("retry lost during shutdown: %v", rows)
+	}
+}
+
 func TestRestoreRetriesSkipsActiveJob(t *testing.T) {
 	e := newEnv(t, 2)
 	jid := e.job(t, "j")
