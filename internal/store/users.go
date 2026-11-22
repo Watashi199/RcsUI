@@ -18,6 +18,27 @@ const (
 // Valid indique si le rôle est connu.
 func (r Role) Valid() bool { return r == RoleAdmin || r == RoleOperator || r == RoleViewer }
 
+// Level ordonne les rôles (viewer < operator < admin ; 0 si inconnu).
+func (r Role) Level() int {
+	switch r {
+	case RoleViewer:
+		return 1
+	case RoleOperator:
+		return 2
+	case RoleAdmin:
+		return 3
+	}
+	return 0
+}
+
+// Cap retourne le plus faible des deux rôles.
+func (r Role) Cap(max Role) Role {
+	if max.Level() < r.Level() {
+		return max
+	}
+	return r
+}
+
 // User est un compte.
 type User struct {
 	ID           int64      `json:"id"`

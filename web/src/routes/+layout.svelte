@@ -99,6 +99,7 @@
 				</div>
 				<div class="row small">
 					<a href="/password">{t('common.nav.password')}</a>
+					<a href="/tokens">{t('common.nav.tokens')}</a>
 					<button class="link" onclick={doLogout}>{t('common.nav.logout')}</button>
 				</div>
 				<LocaleSwitch />

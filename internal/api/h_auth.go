@@ -188,6 +188,12 @@ func (s *Server) handlePatchUser(w http.ResponseWriter, r *http.Request, cur *au
 		s.fail(w, r, err)
 		return
 	}
+	// Un jeton d'API ne peut ni réinitialiser un mot de passe ni modifier le
+	// compte de son propriétaire : une fuite ne doit pas permettre de l'évincer.
+	if cur.APIToken != nil && (in.Password != nil || id == cur.User.ID) {
+		writeError(w, http.StatusForbidden, "session_required", "this change requires an interactive session")
+		return
+	}
 	target, err := s.DB.GetUser(r.Context(), id)
 	if err != nil {
 		s.fail(w, r, err)

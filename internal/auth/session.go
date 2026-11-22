@@ -35,6 +35,9 @@ type Current struct {
 	User      store.User
 	TokenHash []byte
 	CSRFToken string
+	// APIToken : requête authentifiée par jeton d'API (nil pour une session).
+	// User.Role est alors plafonné par le rôle du jeton.
+	APIToken *store.APIToken
 }
 
 type ctxKey struct{}

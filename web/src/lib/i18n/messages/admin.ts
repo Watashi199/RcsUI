@@ -122,6 +122,24 @@ export const fr = {
 	'admin.password.minLength': '10 caractères minimum.',
 	'admin.password.confirm': 'Confirmation',
 
+	// Jetons d'API
+	'admin.tokens.title': "Jetons d'API",
+	'admin.tokens.help':
+		"Un jeton permet d'appeler l'API depuis un script (en-tête « Authorization: Bearer … ») avec vos droits, plafonnés au rôle choisi. Il ne peut ni changer votre mot de passe ni gérer les jetons.",
+	'admin.tokens.name': 'Nom',
+	'admin.tokens.role': 'Rôle maximal',
+	'admin.tokens.expires': 'Expiration (jours, 0 = jamais)',
+	'admin.tokens.created': 'Créé',
+	'admin.tokens.lastUsed': 'Dernière utilisation',
+	'admin.tokens.expiresAt': 'Expire',
+	'admin.tokens.never': 'jamais',
+	'admin.tokens.none': 'Aucun jeton.',
+	'admin.tokens.new': 'Nouveau jeton',
+	'admin.tokens.copyNow': 'Copiez ce jeton maintenant : il ne sera plus affiché.',
+	'admin.tokens.revoke': 'Révoquer',
+	'admin.tokens.revokeConfirm': 'Révoquer le jeton « {name} » ? Les scripts qui l’utilisent cesseront de fonctionner.',
+	'admin.tokens.revoked': 'Jeton révoqué.',
+
 	// Connexion
 	'admin.login.ssoFailed': 'La connexion SSO a échoué.',
 	'admin.login.ssoNotProvisioned': "Aucun compte n'est associé à cette identité SSO. Contactez un administrateur.",
@@ -251,6 +269,23 @@ export const en: Record<keyof typeof fr, string> = {
 	'admin.password.new': 'New password',
 	'admin.password.minLength': '10 characters minimum.',
 	'admin.password.confirm': 'Confirm password',
+
+	'admin.tokens.title': 'API tokens',
+	'admin.tokens.help':
+		'A token lets a script call the API (“Authorization: Bearer …” header) with your permissions, capped to the chosen role. It can neither change your password nor manage tokens.',
+	'admin.tokens.name': 'Name',
+	'admin.tokens.role': 'Maximum role',
+	'admin.tokens.expires': 'Expiry (days, 0 = never)',
+	'admin.tokens.created': 'Created',
+	'admin.tokens.lastUsed': 'Last used',
+	'admin.tokens.expiresAt': 'Expires',
+	'admin.tokens.never': 'never',
+	'admin.tokens.none': 'No tokens.',
+	'admin.tokens.new': 'New token',
+	'admin.tokens.copyNow': 'Copy this token now: it will not be shown again.',
+	'admin.tokens.revoke': 'Revoke',
+	'admin.tokens.revokeConfirm': 'Revoke token “{name}”? Scripts using it will stop working.',
+	'admin.tokens.revoked': 'Token revoked.',
 
 	'admin.login.ssoFailed': 'SSO sign-in failed.',
 	'admin.login.ssoNotProvisioned': 'No account is linked to this SSO identity. Contact an administrator.',

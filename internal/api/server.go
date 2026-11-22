@@ -87,6 +87,9 @@ func (s *Server) Handler() http.Handler {
 	a("POST /api/v1/auth/logout", s.handleLogout)
 	a("GET /api/v1/auth/me", s.handleMe)
 	a("POST /api/v1/auth/password", s.handleChangePassword)
+	a("GET /api/v1/auth/tokens", s.handleListTokens)
+	a("POST /api/v1/auth/tokens", s.handleCreateToken)
+	a("DELETE /api/v1/auth/tokens/{id}", s.handleDeleteToken)
 
 	a("GET /api/v1/system/info", s.handleSystemInfo)
 	a("GET /api/v1/settings", s.adminOnly(s.handleGetSettings))
@@ -177,10 +180,33 @@ func isSafeMethod(m string) bool {
 	return m == http.MethodGet || m == http.MethodHead || m == http.MethodOptions
 }
 
-// authed exige une session valide, le token CSRF pour les méthodes non sûres,
-// et bloque tout sauf le changement de mot de passe si celui-ci est requis.
+// tokenForbidden : chemins réservés aux sessions (un jeton d'API ne peut ni
+// changer le mot de passe ni gérer les jetons).
+func tokenForbidden(path string) bool {
+	return path == "/api/v1/auth/password" || path == "/api/v1/auth/logout" ||
+		path == "/api/v1/auth/tokens" || strings.HasPrefix(path, "/api/v1/auth/tokens/")
+}
+
+// authed exige une session valide (ou un jeton d'API), le token CSRF pour les
+// méthodes non sûres d'une session, et bloque tout sauf le changement de mot
+// de passe si celui-ci est requis.
 func (s *Server) authed(h authedHandler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Jeton d'API : jamais de repli sur le cookie, pas de CSRF (aucun
+		// identifiant implicite envoyé par le navigateur).
+		if raw, ok := auth.BearerToken(r); ok {
+			cur, err := s.Sessions.LookupAPIToken(r, raw)
+			if err != nil {
+				writeError(w, http.StatusUnauthorized, "unauthenticated", "invalid API token")
+				return
+			}
+			if tokenForbidden(r.URL.Path) {
+				writeError(w, http.StatusForbidden, "session_required", "this endpoint requires an interactive session")
+				return
+			}
+			h(w, r.WithContext(auth.WithCurrent(r.Context(), cur)), cur)
+			return
+		}
 		cur, err := s.Sessions.Lookup(r)
 		if err != nil {
 			writeError(w, http.StatusUnauthorized, "unauthenticated", "authentication required")

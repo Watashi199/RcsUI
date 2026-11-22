@@ -19,6 +19,16 @@ export type RunState =
 
 export const ACTIVE_STATES: RunState[] = ['queued', 'starting', 'running', 'cancelling'];
 
+export interface ApiToken {
+	id: number;
+	name: string;
+	prefix: string;
+	role: Role;
+	createdAt: string;
+	expiresAt?: string;
+	lastUsedAt?: string;
+}
+
 export interface User {
 	id: number;
 	username: string;
