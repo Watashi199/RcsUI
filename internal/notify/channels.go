@@ -9,12 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"mime"
 	"mime/quotedprintable"
 	"net"
 	"net/http"
 	"net/mail"
 	"net/smtp"
+	"net/textproto"
 	"strconv"
 	"strings"
 	"time"
@@ -162,7 +164,7 @@ func (n *Notifier) sendEmail(ctx context.Context, s SMTPConfig, ev Event) error 
 	if s.Username != "" {
 		// PlainAuth refuse d'envoyer le mot de passe sans TLS, sauf vers localhost.
 		if err := c.Auth(smtp.PlainAuth("", s.Username, s.Password, s.Host)); err != nil {
-			return permanentError{fmt.Errorf("authentication: %w", err)}
+			return smtpAuthError(err)
 		}
 	}
 	if err := c.Mail(s.From); err != nil {
@@ -184,7 +186,29 @@ func (n *Notifier) sendEmail(ctx context.Context, s SMTPConfig, ev Event) error 
 	if err := w.Close(); err != nil {
 		return err
 	}
-	return c.Quit()
+	// Message accepté par le serveur : livré. QUIT n'est qu'un nettoyage, son
+	// échec ne doit pas provoquer un renvoi (doublon).
+	_ = c.Quit()
+	return nil
+}
+
+// smtpAuthError classe un échec d'authentification : un refus définitif (5xx,
+// ou mot de passe qu'on refuse d'envoyer sans TLS) n'est pas retenté ; un
+// refus temporaire (4xx) ou une erreur réseau l'est.
+func smtpAuthError(err error) error {
+	err = fmt.Errorf("authentication: %w", err)
+	var tp *textproto.Error
+	if errors.As(err, &tp) {
+		if tp.Code >= 500 {
+			return permanentError{err}
+		}
+		return err
+	}
+	var ne net.Error
+	if errors.As(err, &ne) || errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return err
+	}
+	return permanentError{err}
 }
 
 // emailMessage construit le message (texte brut, UTF-8 en quoted-printable).

@@ -63,6 +63,8 @@ type fakeSMTP struct {
 	from string
 	to   []string
 	data string
+	// dropQuit : coupe la connexion sans répondre à QUIT.
+	dropQuit bool
 }
 
 func startSMTP(t *testing.T) *fakeSMTP {
@@ -110,6 +112,8 @@ func (f *fakeSMTP) serve(conn net.Conn) {
 			f.mu.Unlock()
 			if string(b) == "\x00user\x00secret" {
 				say("235 ok")
+			} else if string(b) == "\x00user\x00busy" {
+				say("454 temporary authentication failure")
 			} else {
 				say("535 bad credentials")
 			}
@@ -138,7 +142,12 @@ func (f *fakeSMTP) serve(conn net.Conn) {
 			f.mu.Unlock()
 			say("250 queued")
 		case cmd == "QUIT":
-			say("221 bye")
+			f.mu.Lock()
+			drop := f.dropQuit
+			f.mu.Unlock()
+			if !drop {
+				say("221 bye")
+			}
 			return
 		default:
 			say("502 unknown")
@@ -186,6 +195,19 @@ func TestEmail(t *testing.T) {
 	var p permanentError
 	if err == nil || !errors.As(err, &p) {
 		t.Errorf("bad credentials: %v", err)
+	}
+	// Refus temporaire (454) : à retenter.
+	s.Password = "busy"
+	if err := n.sendEmail(context.Background(), s, ev); err == nil || errors.As(err, &p) {
+		t.Errorf("temporary auth failure must be retryable: %v", err)
+	}
+	// Message accepté puis connexion coupée avant la réponse à QUIT : livré.
+	s.Password = "secret"
+	f.mu.Lock()
+	f.dropQuit = true
+	f.mu.Unlock()
+	if err := n.sendEmail(context.Background(), s, ev); err != nil {
+		t.Errorf("accepted message reported as failed: %v", err)
 	}
 	// STARTTLS exigé mais non proposé : refus.
 	s.Security, s.Password = SMTPStartTLS, "secret"
