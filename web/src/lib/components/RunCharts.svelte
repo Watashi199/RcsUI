@@ -52,7 +52,8 @@
 	const H = 140;
 	const PAD = { l: 64, r: 8, t: 10, b: 6 };
 	let widths = $state<Record<string, number>>({});
-	let hover = $state<{ chart: string; i: number } | null>(null);
+	// Sélection par id de run : la liste peut changer (rechargement) pendant un survol.
+	let hover = $state<{ chart: string; id: string } | null>(null);
 
 	// Colonne à extrémité arrondie (4 px), base carrée.
 	function column(x: number, y: number, w: number, base: number): string {
@@ -70,6 +71,7 @@
 			{@const bw = Math.max(2, Math.min(24, band - 2))}
 			{@const base = H - PAD.b}
 			{@const y = (v: number) => base - (v / max) * (base - PAD.t)}
+			{@const hi = hover?.chart === c.key ? points.findIndex((q) => q.id === hover?.id) : -1}
 			<figure class="card">
 				<figcaption>{c.title} <span class="muted small">· {t('jobs.charts.lastRuns', { n: points.length })}</span></figcaption>
 				<div class="plot" bind:clientWidth={widths[c.key]}>
@@ -82,7 +84,7 @@
 							{@const x = PAD.l + i * band + (band - bw) / 2}
 							{@const v = c.value(p)}
 							{#if v > 0}
-								<path class="bar" class:on={hover?.chart === c.key && hover.i === i} d={column(x, y(v), bw, base)} />
+								<path class="bar" class:on={hover?.chart === c.key && hover.id === p.id} d={column(x, y(v), bw, base)} />
 							{/if}
 							<!-- Point focusable : même valeur au clavier qu'au survol. -->
 							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -95,16 +97,16 @@
 								tabindex="0"
 								role="graphics-symbol"
 								aria-label="{dateTime(p.at)}: {c.fmt(v)} ({stateLabel(p.state)})"
-								onpointerenter={() => (hover = { chart: c.key, i })}
+								onpointerenter={() => (hover = { chart: c.key, id: p.id })}
 								onpointerleave={() => (hover = null)}
-								onfocus={() => (hover = { chart: c.key, i })}
+								onfocus={() => (hover = { chart: c.key, id: p.id })}
 								onblur={() => (hover = null)}
 							/>
 						{/each}
 					</svg>
-					{#if hover?.chart === c.key}
-						{@const p = points[hover.i]}
-						{@const left = Math.min(Math.max(PAD.l + (hover.i + 0.5) * band, 80), PAD.l + plotW - 80)}
+					{#if hi >= 0}
+						{@const p = points[hi]}
+						{@const left = Math.min(Math.max(PAD.l + (hi + 0.5) * band, 80), PAD.l + plotW - 80)}
 						<div class="tip" style="left:{left}px" role="status">
 							<strong>{c.fmt(c.value(p))}</strong>
 							<span class="muted">{dateTime(p.at)} · {stateLabel(p.state)}</span>
